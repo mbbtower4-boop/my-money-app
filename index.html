@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light">
+<title>הכסף שלי</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    color-scheme:light only;
+    --bg:#E7ECEB; --card:#FFFFFF; --ink:#143038; --ink-soft:#546A72;
+    --line:#D6DEDD; --line-soft:#E8EDEC;
+    --income:#1E7F5C; --income-bg:#E4F1EB;
+    --expense:#B23A48; --expense-bg:#F6E6E8;
+    --gold:#A9781F; --gold-bg:#F4EBD8;
+    --shadow:0 1px 2px rgba(20,48,56,.06),0 6px 24px rgba(20,48,56,.06);
+  }
+  html{color-scheme:light only;background:#E7ECEB !important}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Heebo',system-ui,sans-serif;background:#E7ECEB !important;color:var(--ink);
+    -webkit-font-smoothing:antialiased;overscroll-behavior-y:none;
+    font-feature-settings:"tnum";
+  }
+  @media (prefers-color-scheme: dark){
+    html,body{background:#E7ECEB !important;color:#143038}
+  }
+  input,select,textarea{color:var(--ink);background:var(--card)}
+  .num{font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:plaintext;display:inline-block}
+  .serif{font-family:'Frank Ruhl Libre',serif}
+  #app{max-width:520px;margin:0 auto;min-height:100vh;padding:0 16px 132px;position:relative;
+    background:#E7ECEB;border-radius:0 0 0 0}
+
+  /* header */
+  header{padding:20px 2px 8px;display:flex;align-items:baseline;justify-content:space-between}
+  header h1{font-family:'Frank Ruhl Libre',serif;font-weight:900;font-size:27px;letter-spacing:-.5px;color:var(--ink)}
+  header h1 span{color:var(--income)}
+  header .date{font-size:13px;color:var(--ink-soft);font-weight:600}
+  .savestate{display:block;font-size:11px;font-weight:700;margin-top:2px;height:14px}
+  .savestate.ok{color:var(--income)}
+  .savestate.bad{color:var(--expense)}
+
+  /* hero */
+  .monthbar{display:inline-flex;align-items:center;gap:6px;background:var(--card);border-radius:20px;padding:8px 15px;
+    font-size:14px;font-weight:700;color:var(--ink);box-shadow:var(--shadow);cursor:pointer;margin:2px 0 12px}
+  .mpick{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--card);border-radius:14px;padding:10px;margin-bottom:14px;box-shadow:var(--shadow)}
+  .mpick button{width:44px;height:44px;flex:0 0 44px;border:none;background:var(--line-soft);border-radius:12px;font-size:22px;color:var(--ink);cursor:pointer}
+  .mpick #mpick-label{flex:1;text-align:center;font-family:'Frank Ruhl Libre',serif;font-weight:700;font-size:19px}
+  .hero{
+    background:var(--card);color:var(--ink);border-radius:22px;padding:20px 22px 18px;margin-top:6px;
+    box-shadow:var(--shadow);position:relative;overflow:hidden;border:1px solid var(--line-soft)
+  }
+  .hero::after{content:"";position:absolute;left:-40px;top:-40px;width:150px;height:150px;
+    background:radial-gradient(circle,rgba(30,127,92,.12),transparent 70%);pointer-events:none}
+  .hero .lbl{font-size:13px;color:var(--ink-soft);font-weight:600;position:relative}
+  .hero .big{font-family:'Frank Ruhl Libre',serif;font-weight:800;font-size:44px;line-height:1.1;margin-top:2px;position:relative;color:var(--income)}
+  .hero .sub{display:flex;gap:14px;margin-top:16px;position:relative}
+  .hero .sub div{flex:1;background:var(--line-soft);border-radius:12px;padding:9px 12px}
+  .hero .sub .k{font-size:12px;color:var(--ink-soft)}
+  .hero .sub .v{font-size:17px;font-weight:800;margin-top:1px}
+  .hero .v.in{color:var(--income)}.hero .v.ex{color:var(--expense)}
+
+  /* quick capture */
+  .capture{background:var(--card);border-radius:18px;padding:12px;margin-top:14px;box-shadow:var(--shadow)}
+  .capture .row{display:flex;gap:8px;align-items:center}
+  .capture input{
+    flex:1;border:none;background:var(--line-soft);border-radius:12px;padding:13px 14px;
+    font-family:inherit;font-size:15px;color:var(--ink);min-width:0
+  }
+  .capture input::placeholder{color:#9DAAAE}
+  .mic{
+    width:46px;height:46px;flex:0 0 46px;border:none;border-radius:14px;background:var(--gold);
+    color:#fff;font-size:20px;display:grid;place-items:center;cursor:pointer;transition:transform .1s
+  }
+  .mic:active{transform:scale(.92)}
+  .mic.live{background:var(--expense);animation:pulse 1.1s infinite}
+  .go{
+    width:46px;height:46px;flex:0 0 46px;border:none;border-radius:14px;background:var(--income);
+    color:#fff;font-size:24px;font-weight:700;display:grid;place-items:center;cursor:pointer;transition:transform .1s;
+    box-shadow:0 2px 8px rgba(30,127,92,.35)
+  }
+  .go:active{transform:scale(.92)}
+  .capture .row{gap:7px}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(178,58,72,.5)}70%{box-shadow:0 0 0 14px rgba(178,58,72,0)}100%{box-shadow:0 0 0 0 rgba(178,58,72,0)}}
+  .hint{font-size:12px;color:var(--ink-soft);margin-top:9px;padding:0 4px;line-height:1.5}
+
+  /* section title */
+  .stitle{display:flex;align-items:center;justify-content:space-between;margin:22px 4px 10px;gap:8px;flex-wrap:wrap}
+  .stitle h2{font-size:15px;font-weight:800;letter-spacing:.2px;color:var(--ink)}
+  .stitle .add{font-size:13px;font-weight:800;color:var(--ink);background:var(--card);
+    border:1px solid var(--line);border-radius:20px;padding:8px 14px;cursor:pointer;
+    box-shadow:var(--shadow);font-family:inherit;white-space:nowrap}
+  .stitle .add:active{background:var(--line-soft)}
+  .btns .add:last-child{background:var(--income);border-color:var(--income);color:#fff;box-shadow:0 2px 8px rgba(30,127,92,.3)}
+
+  /* cards / rows */
+  .list{display:flex;flex-direction:column;gap:1px;background:var(--line-soft);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+  .item{background:var(--card);display:flex;align-items:center;gap:12px;padding:13px 14px}
+  .dot{width:38px;height:38px;flex:0 0 38px;border-radius:11px;display:grid;place-items:center;font-size:17px}
+  .dot.in{background:var(--income-bg)}.dot.ex{background:var(--expense-bg)}.dot.gold{background:var(--gold-bg)}
+  .item .mid{flex:1;min-width:0}
+  .item .t{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .item .s{font-size:12px;color:var(--ink-soft);margin-top:1px}
+  .item .amt{font-weight:700;font-size:15px;white-space:nowrap}
+  .amt.in{color:var(--income)}.amt.ex{color:var(--expense)}
+  .item .del{border:none;background:none;color:#C3CCCB;font-size:18px;padding:4px;cursor:pointer;line-height:1}
+  .item .mid,.item .amt,.item .dot{cursor:pointer}
+  .item:active{background:var(--line-soft)}
+
+  .empty{background:var(--card);border-radius:16px;padding:26px 18px;text-align:center;color:var(--ink-soft);box-shadow:var(--shadow)}
+  /* alerts */
+  .alert{display:flex;align-items:center;gap:10px;border-radius:14px;padding:12px 14px;margin-top:12px;font-size:13.5px;font-weight:600;box-shadow:var(--shadow)}
+  .alert.warn{background:#FDF3E3;color:#8A5A18;border:1px solid #F0DCB4}
+  .alert.danger{background:var(--expense-bg);color:#8E2130;border:1px solid #EFC4CA}
+  .alert .aico{font-size:18px;flex:0 0 auto}
+  .empty .e-emoji{font-size:26px}
+  .empty p{font-size:14px;margin-top:6px}
+
+  /* category summary chips */
+  .cats{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 4px;margin-bottom:2px;scrollbar-width:none}
+  .cats::-webkit-scrollbar{display:none}
+  .chip{flex:0 0 auto;background:var(--card);border-radius:13px;padding:9px 13px;box-shadow:var(--shadow);min-width:112px}
+  .chip .cn{font-size:12px;color:var(--ink-soft)}
+  .chip .cv{font-size:15px;font-weight:700;margin-top:2px}
+  .chip .cbud{font-size:11px;color:var(--ink-soft);margin-top:1px}
+  .chip .ctrack{height:5px;background:var(--line-soft);border-radius:4px;overflow:hidden;margin-top:6px}
+  .chip .ctrack i{display:block;height:100%;background:var(--income);border-radius:4px}
+  .chip .ctrack i.over{background:var(--expense)}
+
+  /* invest edit */
+  .inv-total{display:flex;justify-content:space-between;align-items:center;background:var(--gold-bg);color:var(--ink);border:1px solid #E7D6AE;border-radius:14px;padding:13px 16px;margin-bottom:10px;font-weight:700;box-shadow:var(--shadow)}
+  .inv-total .num{font-family:'Frank Ruhl Libre',serif;font-size:20px;color:var(--gold)}
+  .inv-edit{display:flex;align-items:center;gap:10px;background:var(--card);padding:14px;border-radius:14px;box-shadow:var(--shadow);margin-bottom:1px}
+  .inv-edit .t{flex:1;font-weight:700;font-size:15px}
+  .inv-edit input{width:120px;border:1px solid var(--line);border-radius:10px;padding:10px;text-align:left;font-family:inherit;font-size:15px;color:var(--ink)}
+
+  /* status pill */
+  .pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}
+  .pill.pending{background:#F1EBDA;color:#8A6D18}
+  .pill.invoiced{background:#E2ECF4;color:#2C5D80}
+  .pill.paid{background:var(--income-bg);color:var(--income)}
+
+  /* bottom nav */
+  nav{position:fixed;bottom:0;right:0;left:0;background:#FFFFFF;
+    border-top:1px solid #D0D9D8;display:flex;max-width:520px;margin:0 auto;padding:9px 4px calc(11px + env(safe-area-inset-bottom));
+    z-index:30}
+  nav button{flex:1;border:none;background:none;display:flex;flex-direction:column;align-items:center;gap:4px;
+    padding:7px 2px;color:#546A72;cursor:pointer;font-family:inherit;border-radius:13px}
+  nav button .ic{font-size:23px;line-height:1;opacity:.85;filter:grayscale(.35)}
+  nav button .lb{font-size:12px;font-weight:700}
+  nav button.on{color:#0E4A3A;background:var(--income-bg)}
+  nav button.on .ic{opacity:1;filter:none}
+  nav button.on .lb{font-weight:900}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+
+  /* sheet (modal) */
+  .scrim{position:fixed;inset:0;background:rgba(20,48,56,.4);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
+  .scrim.show{opacity:1;pointer-events:auto}
+  .sheet{position:fixed;bottom:0;right:0;left:0;max-width:520px;margin:0 auto;background:var(--bg);
+    border-radius:24px 24px 0 0;padding:18px 18px calc(20px + env(safe-area-inset-bottom));z-index:50;
+    max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    transform:translateY(100%);transition:transform .26s cubic-bezier(.3,.9,.3,1);box-shadow:0 -8px 40px rgba(20,48,56,.2)}
+  .sheet.show{transform:translateY(0)}
+  .sheet .grip{width:38px;height:4px;background:var(--line);border-radius:4px;margin:0 auto 14px}
+  .sheet h3{font-size:18px;font-weight:800;margin-bottom:14px;font-family:'Frank Ruhl Libre',serif}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:5px}
+  .field input,.field select{width:100%;border:1px solid var(--line);border-radius:12px;padding:13px 14px;
+    font-family:inherit;font-size:15px;color:var(--ink);background:var(--card)}
+  .seg{display:flex;gap:8px}
+  .seg button{flex:1;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:11px;
+    font-family:inherit;font-weight:700;font-size:14px;color:var(--ink-soft);cursor:pointer}
+  .seg button.on.exp{background:var(--expense);border-color:var(--expense);color:#fff}
+  .seg button.on.inc{background:var(--income);border-color:var(--income);color:#fff}
+  .save{width:100%;border:none;background:var(--income);color:#fff;border-radius:14px;padding:15px;
+    font-family:inherit;font-weight:800;font-size:16px;margin-top:6px;cursor:pointer;box-shadow:0 2px 10px rgba(30,127,92,.28)}
+  .save:active{opacity:.85}
+  .catgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .catgrid button{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:11px 8px;
+    font-family:inherit;font-weight:600;font-size:13px;color:var(--ink);cursor:pointer;text-align:center;line-height:1.25;min-height:44px}
+  .catgrid button.on{border-color:var(--income);background:var(--income);color:#fff}
+
+  /* month navigator */
+  .mnav{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:14px;padding:8px 10px;box-shadow:var(--shadow);margin-bottom:12px}
+  .mnav button{width:38px;height:38px;flex:0 0 38px;border:none;background:var(--line-soft);border-radius:11px;font-size:20px;color:var(--ink);cursor:pointer}
+  .mnav button:disabled{opacity:.35}
+  .mnav .marrow{width:auto;flex:0 0 auto;height:40px;padding:0 12px;display:flex;align-items:center;gap:5px;font-family:inherit;font-weight:700;font-size:13px}
+  .mnav .marrow .chev{font-size:19px;line-height:1}
+  .mnav .marrow .mlbl{font-size:13px;white-space:nowrap}
+  .mnav-mid{flex:1;text-align:center;cursor:pointer}
+  .mnav-mid #mnav-label{display:block;font-size:15px;font-weight:700}
+  .mnav-net{font-size:13px;font-weight:600;color:var(--ink-soft);margin-top:1px}
+  .mnav-net.pos{color:var(--income)}.mnav-net.neg{color:var(--expense)}
+  /* checking account card */
+  .osh{background:var(--card);color:var(--ink);border:1px solid var(--line-soft);border-radius:16px;padding:15px 16px;margin-bottom:12px;box-shadow:var(--shadow);cursor:pointer;position:relative;overflow:hidden}
+  .osh::after{content:"";position:absolute;left:-30px;bottom:-40px;width:130px;height:130px;background:radial-gradient(circle,rgba(30,127,92,.10),transparent 70%);pointer-events:none}
+  .osh-top{display:flex;justify-content:space-between;align-items:center;position:relative}
+  .osh-lbl{font-size:13px;color:var(--ink-soft);font-weight:600}
+  .osh-edit{font-size:12px;font-weight:800;color:var(--income)}
+  .osh-big{font-family:'Frank Ruhl Libre',serif;font-weight:800;font-size:30px;margin-top:3px;position:relative;color:var(--income)}
+  .osh-big.neg{color:var(--expense)}
+  .osh-break{display:flex;gap:14px;margin-top:8px;font-size:12px;color:var(--ink-soft);position:relative;flex-wrap:wrap}
+  .osh-break b{font-weight:800;color:var(--ink)}
+  .osh-break .in b{color:var(--income)}.osh-break .ex b{color:var(--expense)}
+
+  /* stats */
+  .panel{background:var(--card);border-radius:18px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px}
+  .panel h3{font-size:14px;font-weight:800;margin-bottom:14px}
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .kpi{background:var(--card);border-radius:16px;padding:14px;box-shadow:var(--shadow)}
+  .kpi .k{font-size:12px;color:var(--ink-soft)}
+  .kpi .v{font-family:'Frank Ruhl Libre',serif;font-weight:700;font-size:22px;margin-top:3px}
+  .kpi .v.pos{color:var(--income)}.kpi .v.neg{color:var(--expense)}
+  /* grouped bar chart */
+  .bars{display:flex;align-items:flex-end;justify-content:space-between;gap:6px;height:150px;padding-top:6px}
+  .barcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end;cursor:pointer}
+  .barpair{display:flex;gap:3px;align-items:flex-end;height:100%;width:100%;justify-content:center}
+  .bar{width:11px;border-radius:5px 5px 0 0;transition:height .3s,opacity .2s;min-height:2px}
+  .bar.in{background:var(--income)}.bar.ex{background:var(--expense)}
+  .barcol .bl{font-size:11px;color:var(--ink-soft);white-space:nowrap}
+  .barcol.sel .bl{color:var(--ink);font-weight:800}
+  .barcol.sel .barpair{background:var(--line-soft);border-radius:8px}
+  .legend{display:flex;gap:16px;justify-content:center;margin-top:12px;font-size:12px;color:var(--ink-soft)}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+  /* category breakdown bars */
+  .cbar{margin-bottom:12px}
+  .cbar .top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
+  .cbar .top .cl{font-weight:600}.cbar .top .cv{font-weight:700;color:var(--ink-soft)}
+  .track{height:9px;background:var(--line-soft);border-radius:6px;overflow:hidden}
+  .track i{display:block;height:100%;border-radius:6px;background:var(--gold);transition:width .4s}
+  /* net worth chart */
+  .nw-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+  .nw-big{font-family:'Frank Ruhl Libre',serif;font-weight:700;font-size:28px}
+  .nw-chg{font-size:13px;font-weight:700}
+  .nw-chg.pos{color:var(--income)}.nw-chg.neg{color:var(--expense)}
+  .nwchart{width:100%;height:120px;display:block}
+  .nw-labels{display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--ink-soft)}
+
+  .view{display:none}.view.on{display:block;animation:fade .25s}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div id="backdrop" style="position:fixed;inset:0;background:#E7ECEB;z-index:-1"></div>
+<div id="app">
+  <header>
+    <h1>הכסף <span>שלי</span></h1>
+    <div style="text-align:left"><span class="date" id="today"></span><span class="savestate" id="savestate"></span></div>
+  </header>
+
+  <!-- ===== סקירה ===== -->
+  <section class="view on" id="v-overview">
+    <div class="monthbar" onclick="openMonthPicker()">📅 <span id="active-month"></span> <span style="opacity:.55">▾</span></div>
+    <div class="hero">
+      <div class="lbl">זמין החודש</div>
+      <div class="big num" id="h-net">₪0</div>
+      <div class="sub">
+        <div><div class="k">הכנסות</div><div class="v in num" id="h-in">₪0</div></div>
+        <div><div class="k">הוצאות</div><div class="v ex num" id="h-ex">₪0</div></div>
+      </div>
+    </div>
+
+    <div class="capture">
+      <div class="row">
+        <input id="cap-in" placeholder="לדוגמה: קניתי במכולת 60 שקל" autocomplete="off">
+        <button class="mic" id="cap-mic" aria-label="הקלטה">🎤</button>
+        <button class="go" id="cap-go" aria-label="הוסף">➕</button>
+      </div>
+      <div class="hint" id="cap-hint">כתבו או הכתיבו (מיקרופון המקלדת), ואז לחצו ➕ להוספה. אפשר גם ללחוץ 🎤 להכתבה ישירה.</div>
+    </div>
+
+    <div id="alerts"></div>
+    <div class="stitle"><h2>סיכום מהיר</h2></div>
+    <div class="list">
+      <div class="item"><div class="dot in">💎</div><div class="mid"><div class="t">שווי נקי</div><div class="s">השקעות + יתרת עו״ש</div></div><div class="amt num" id="ov-nw">₪0</div></div>
+      <div class="item"><div class="dot gold">🏦</div><div class="mid"><div class="t">יתרת עו״ש זמינה</div><div class="s">אחרי הכנסות והוצאות החודש</div></div><div class="amt num" id="ov-osh">₪0</div></div>
+      <div class="item"><div class="dot gold">📈</div><div class="mid"><div class="t">שווי השקעות</div><div class="s">כל האפיקים</div></div><div class="amt num" id="ov-inv">₪0</div></div>
+      <div class="item"><div class="dot in">🧾</div><div class="mid"><div class="t">צפוי מפרויקטים</div><div class="s">ממתין וחשבונית שנשלחה</div></div><div class="amt in num" id="ov-proj">₪0</div></div>
+    </div>
+  </section>
+
+  <!-- ===== השקעות ===== -->
+  <section class="view" id="v-invest">
+    <div class="stitle"><h2>השקעות</h2><button class="add" onclick="openInv()">+ הוסף אפיק</button></div>
+    <div class="inv-total"><span>סך הכל</span><span class="num" id="inv-total">₪0</span></div>
+    <div id="inv-list"></div>
+    <div class="hint" style="margin-top:12px">הקישו על סכום כדי לעדכן, או השתמשו במיקרופון: "קרן השתלמות תשעים אלף".</div>
+    <div class="capture" style="margin-top:12px">
+      <div class="row">
+        <input id="inv-cap" placeholder="לדוגמה: קרן השתלמות 90 אלף" autocomplete="off">
+        <button class="mic" id="inv-mic" aria-label="הקלטה">🎤</button>
+        <button class="go" id="inv-go" aria-label="עדכן">➕</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== תזרים ===== -->
+  <section class="view" id="v-flow">
+    <div class="stitle"><h2>תזרים</h2><div class="btns"><button class="add" onclick="go('events')">אירועים</button><button class="add" onclick="openBudget()">תקציב</button><button class="add" onclick="openTxn()">+ הוסף</button></div></div>
+    <div class="mnav">
+      <button class="marrow" id="mnav-older" onclick="stepMonth(-1)"><span class="chev">‹</span><span class="mlbl" id="older-lbl"></span></button>
+      <div class="mnav-mid" onclick="openMonthPicker()"><span id="mnav-label"></span><span class="mnav-net num" id="mnav-net"></span></div>
+      <button class="marrow" id="mnav-newer" onclick="stepMonth(1)"><span class="mlbl" id="newer-lbl"></span><span class="chev">›</span></button>
+    </div>
+    <div class="osh" onclick="openOsh()">
+      <div class="osh-top"><span class="osh-lbl">יתרת עו״ש זמינה</span><span class="osh-edit">עדכון יתרה ›</span></div>
+      <div class="osh-big num" id="osh-avail">₪0</div>
+      <div class="osh-break">
+        <span>פתיחה <b class="num" id="osh-open">₪0</b></span>
+        <span class="in">הכנסות <b class="num" id="osh-in">₪0</b></span>
+        <span class="ex">הוצאות <b class="num" id="osh-ex">₪0</b></span>
+      </div>
+    </div>
+    <div class="cats" id="cat-chips"></div>
+    <div id="flow-list"></div>
+  </section>
+
+  <!-- ===== הוצאות קבועות ===== -->
+  <section class="view" id="v-fixed">
+    <div class="stitle"><h2>הוצאות קבועות</h2><button class="add" onclick="openRec()">+ הוסף</button></div>
+    <div class="inv-total"><span>סך חודשי</span><span class="num" id="rec-total">₪0</span></div>
+    <div class="hint" style="margin:0 4px 10px">מזינים פעם אחת — כל תחילת חודש ההוצאה נרשמת אוטומטית בתזרים. הקישו על שורה לעריכה.</div>
+    <div id="rec-list"></div>
+  </section>
+
+  <!-- ===== פרויקטים ===== -->
+  <section class="view" id="v-proj">
+    <div class="stitle"><h2>פרויקטים</h2><button class="add" onclick="openProj()">+ פרויקט</button></div>
+    <div class="hint" style="margin:0 4px 10px">הקישו על שורה כדי לערוך, על התגית כדי להחליף סטטוס, או על ✕ למחיקה.</div>
+    <div id="proj-list"></div>
+  </section>
+
+  <!-- ===== סטטיסטיקה ===== -->
+  <section class="view" id="v-stats">
+    <div class="stitle"><h2>סטטיסטיקה</h2></div>
+    <div id="stats-body"></div>
+  </section>
+
+  <!-- ===== אירועים (רשימה) ===== -->
+  <section class="view" id="v-events">
+    <div class="stitle"><h2>אירועים</h2><div class="btns"><button class="add" onclick="go('flow')">‹ לתזרים</button><button class="add" onclick="newEvent()">+ אירוע</button></div></div>
+    <div class="hint" style="margin:0 4px 12px">תיעוד הוצאות של אירוע בודד (טיול, אירוע משפחתי וכו׳). כשמסיימים — מעבירים את הסכום לסיכום הכללי.</div>
+    <div id="events-list"></div>
+  </section>
+
+  <!-- ===== אירוע בודד ===== -->
+  <section class="view" id="v-eventdetail">
+    <div class="stitle"><h2 id="ev-name">אירוע</h2><button class="add" onclick="go('events')">‹ חזרה</button></div>
+    <div id="eventdetail-body"></div>
+  </section>
+</div>
+
+<nav>
+  <button data-v="overview" class="on" onclick="go('overview')"><span class="ic">🏠</span><span class="lb">סקירה</span></button>
+  <button data-v="invest" onclick="go('invest')"><span class="ic">📈</span><span class="lb">השקעות</span></button>
+  <button data-v="flow" onclick="go('flow')"><span class="ic">💳</span><span class="lb">תזרים</span></button>
+  <button data-v="fixed" onclick="go('fixed')"><span class="ic">🔁</span><span class="lb">קבועות</span></button>
+  <button data-v="proj" onclick="go('proj')"><span class="ic">🧾</span><span class="lb">פרויקטים</span></button>
+  <button data-v="stats" onclick="go('stats')"><span class="ic">📊</span><span class="lb">נתונים</span></button>
+</nav>
+
+<div class="scrim" id="scrim" onclick="closeSheet()"></div>
+<input type="file" id="import-file" accept="application/json,.json" style="display:none" onchange="importBackup(this.files[0])">
+
+<!-- transaction sheet -->
+<div class="sheet" id="sheet-txn">
+  <div class="grip"></div>
+  <h3 id="txn-title">תנועה חדשה</h3>
+  <div class="field">
+    <div class="seg">
+      <button id="seg-exp" class="on exp" onclick="setKind('expense')">הוצאה</button>
+      <button id="seg-inc" class="inc" onclick="setKind('income')">הכנסה</button>
+    </div>
+  </div>
+  <div class="field"><label>סכום (₪)</label><input id="txn-amt" type="number" inputmode="decimal" placeholder="0"></div>
+  <div class="field" id="txn-catwrap"><label>קטגוריה</label><div class="catgrid" id="txn-cats"></div></div>
+  <div class="field"><label>תיאור</label><input id="txn-note" placeholder="למשל: קניות בסופר"></div>
+  <button class="save" onclick="saveTxn()">שמירה</button>
+</div>
+
+<!-- project sheet -->
+<div class="sheet" id="sheet-proj">
+  <div class="grip"></div>
+  <h3 id="proj-title">פרויקט חדש</h3>
+  <div class="field"><label>שם הפרויקט</label><input id="pr-name" placeholder="למשל: עיצוב אתר"></div>
+  <div class="field"><label>לקוח</label><input id="pr-client" placeholder="שם הלקוח"></div>
+  <div class="field"><label>סכום לחיוב (₪)</label><input id="pr-amt" type="number" inputmode="decimal" placeholder="0"></div>
+  <div class="field"><label>סטטוס</label>
+    <select id="pr-status">
+      <option value="pending">ממתין</option>
+      <option value="invoiced">חשבונית נשלחה</option>
+      <option value="paid">שולם</option>
+    </select>
+  </div>
+  <button class="save" onclick="saveProj()">שמירה</button>
+</div>
+
+<!-- investment sheet -->
+<div class="sheet" id="sheet-inv">
+  <div class="grip"></div>
+  <h3 id="inv-title">אפיק השקעה חדש</h3>
+  <div class="field"><label>סוג</label>
+    <select id="inv-kind" onchange="invKindChanged()"></select>
+  </div>
+  <div class="field"><label>שם (לא חובה)</label><input id="inv-name" placeholder="שם מותאם אישית"></div>
+  <div class="field"><label>שווי נוכחי (₪)</label><input id="inv-value" type="text" inputmode="numeric" placeholder="0"></div>
+  <button class="save" onclick="saveInv()">שמירה</button>
+  <button class="save" id="inv-del" style="background:none;color:var(--expense);margin-top:8px;display:none" onclick="delInvConfirm()">מחיקת האפיק</button>
+</div>
+
+<!-- recurring expense sheet -->
+<div class="sheet" id="sheet-rec">
+  <div class="grip"></div>
+  <h3 id="rec-title">הוצאה קבועה חדשה</h3>
+  <div class="field"><label>שם</label><input id="rec-name" placeholder="למשל: ביטוח רכב"></div>
+  <div class="field"><label>סכום חודשי (₪)</label><input id="rec-amt" type="text" inputmode="numeric" placeholder="0"></div>
+  <div class="field"><label>קטגוריה</label><div class="catgrid" id="rec-cats"></div></div>
+  <button class="save" onclick="saveRec()">שמירה</button>
+  <button class="save" id="rec-del" style="background:none;color:var(--expense);margin-top:8px;display:none" onclick="delRec()">מחיקה</button>
+</div>
+
+<!-- budget sheet -->
+<div class="sheet" id="sheet-budget">
+  <div class="grip"></div>
+  <h3>תקציב חודשי</h3>
+  <div class="hint" style="margin:-4px 0 12px">קבעו יעד הוצאה לכל קטגוריה. השאירו 0 לביטול.</div>
+  <div id="budget-fields"></div>
+  <button class="save" onclick="saveBudget()">שמירה</button>
+</div>
+
+<!-- goal sheet -->
+<div class="sheet" id="sheet-goal">
+  <div class="grip"></div>
+  <h3>יעד חיסכון</h3>
+  <div class="field"><label>שם היעד</label><input id="goal-label" placeholder="למשל: קרן חירום"></div>
+  <div class="field"><label>סכום יעד (₪)</label><input id="goal-target" type="text" inputmode="numeric" placeholder="0"></div>
+  <button class="save" onclick="saveGoal()">שמירה</button>
+</div>
+
+<!-- event sheet (create/edit) -->
+<div class="sheet" id="sheet-event">
+  <div class="grip"></div>
+  <h3 id="event-title">אירוע חדש</h3>
+  <div class="field"><label>שם האירוע</label><input id="event-name" placeholder="למשל: טיול ליוון"></div>
+  <div class="field"><label>קטגוריה בסיכום</label><div class="catgrid" id="event-cats"></div></div>
+  <button class="save" onclick="saveEvent()">שמירה</button>
+  <button class="save" id="event-del" style="background:none;color:var(--expense);margin-top:8px;display:none" onclick="delEvent()">מחיקת האירוע</button>
+</div>
+
+<!-- event item sheet -->
+<div class="sheet" id="sheet-eitem">
+  <div class="grip"></div>
+  <h3 id="eitem-title">הוצאה באירוע</h3>
+  <div class="field"><label>תיאור</label><input id="eitem-name" placeholder="למשל: מלון"></div>
+  <div class="field"><label>סכום (₪)</label><input id="eitem-amt" type="text" inputmode="numeric" placeholder="0"></div>
+  <button class="save" onclick="saveEItem()">שמירה</button>
+  <button class="save" id="eitem-del" style="background:none;color:var(--expense);margin-top:8px;display:none" onclick="delEItem()">מחיקה</button>
+</div>
+
+<!-- checking account (osh) sheet -->
+<div class="sheet" id="sheet-osh">
+  <div class="grip"></div>
+  <h3>יתרת עו״ש</h3>
+  <div class="hint" style="margin:-4px 0 12px">הזינו את היתרה הנוכחית בחשבון הבנק. מכאן היא תתעדכן אוטומטית לפי ההכנסות וההוצאות שתזינו.</div>
+  <div class="field"><label>יתרה נוכחית (₪)</label><input id="osh-input" type="text" inputmode="numeric" placeholder="0"></div>
+  <button class="save" onclick="saveOsh()">שמירה</button>
+</div>
+
+<!-- backup sheet -->
+<div class="sheet" id="sheet-backup">
+  <div class="grip"></div>
+  <h3>גיבוי ושחזור</h3>
+  <div class="hint" style="margin:-4px 0 12px">העתיקו את טקסט הגיבוי ושמרו אותו בפתקים/וואטסאפ לעצמכם. לשחזור — הדביקו אותו כאן ולחצו שחזור.</div>
+  <div class="field"><label>טקסט הגיבוי</label>
+    <textarea id="backup-text" rows="5" style="width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;font-family:monospace;font-size:11px;direction:ltr;background:var(--card);color:var(--ink)"></textarea>
+  </div>
+  <button class="save" onclick="copyBackup()">📋 העתקת הגיבוי</button>
+  <button class="save" style="background:var(--gold);margin-top:8px" onclick="shareBackup()">📤 שיתוף (שמירה לקבצים/פתקים)</button>
+  <button class="save" style="background:var(--ink);margin-top:8px" onclick="restoreFromText()">↩️ שחזור מהטקסט שבתיבה</button>
+  <div class="hint" id="backup-msg" style="text-align:center;margin-top:8px"></div>
+</div>
+
+<!-- month picker sheet -->
+<div class="sheet" id="sheet-month">
+  <div class="grip"></div>
+  <h3>החודש הנוכחי</h3>
+  <div class="hint" style="margin:-4px 0 14px">בחרו את החודש שאיתו אתם עובדים. הסקירה, התקציב וההוצאות הקבועות יתייחסו אליו.</div>
+  <div class="mpick">
+    <button onclick="pickStep(-1)">‹</button>
+    <div id="mpick-label"></div>
+    <button onclick="pickStep(1)">›</button>
+  </div>
+  <button class="save" onclick="applyMonth()">קבע חודש זה</button>
+  <button class="save" id="month-auto" style="background:none;color:var(--ink-soft);margin-top:6px" onclick="applyAuto()">מעקב אוטומטי לפי התאריך</button>
+</div>
+
+<script>
+/* ---------- storage ---------- */
+const KEY='mln-finance-v1';
+let db={investments:[],transactions:[],projects:[]};
+let memoryOnly=false;
+
+/* Save through both Claude's storage (when present) and the browser's
+   localStorage (works in any normal browser / when self-hosted on iPhone). */
+const hasWS=(()=>{try{return !!(window.storage&&typeof window.storage.set==='function');}catch(e){return false;}})();
+async function storeGet(key){
+  if(hasWS){try{const r=await window.storage.get(key);if(r&&r.value!=null)return r.value;}catch(e){}}
+  try{const v=localStorage.getItem(key);if(v!=null)return v;}catch(e){}
+  return null;
+}
+async function storeSet(key,val){
+  let ok=false;
+  if(hasWS){try{const r=await window.storage.set(key,val);if(r!==null)ok=true;}catch(e){}}
+  try{localStorage.setItem(key,val);ok=true;}catch(e){}
+  return ok;
+}
+
+/* investment kinds: key -> label, emoji, voice keywords */
+const KINDS={
+  stock:  {label:'מניות',        emoji:'📊', kw:['מניה','מניות','מנייה','תיק','בורסה','מדד']},
+  pension:{label:'פנסיה',        emoji:'🛡️', kw:['פנסיה','פנסיוני']},
+  study:  {label:'קרן השתלמות',  emoji:'🎓', kw:['השתלמות','קרן השתלמות']},
+  gemel:  {label:'קופת גמל להשקעה',emoji:'🏦', kw:['גמל','קופת גמל','גמל להשקעה']},
+  savings:{label:'קרן חיסכון',   emoji:'🐷', kw:['חיסכון','חסכון','קרן חיסכון','חסכונות']},
+  other:  {label:'אחר',          emoji:'💼', kw:[]}
+};
+const kindInfo=k=>KINDS[k]||KINDS.other;
+const DEFAULT_KINDS=['stock','pension','study','gemel','savings'];
+
+async function load(){
+  try{
+    const v=await storeGet(KEY);
+    if(v) db=JSON.parse(v);
+  }catch(e){ /* first run or unavailable */ }
+  db.investments=db.investments||[];
+  if(!db.investments.length){
+    db.investments=DEFAULT_KINDS.map(k=>({id:uid(),name:kindInfo(k).label,kind:k,value:0,updatedAt:Date.now()}));
+  }else{
+    // migrate: make sure the standard savings/investment channels exist
+    DEFAULT_KINDS.forEach(k=>{
+      if(!db.investments.some(i=>i.kind===k))
+        db.investments.push({id:uid(),name:kindInfo(k).label,kind:k,value:0,updatedAt:Date.now()});
+    });
+  }
+  db.transactions=db.transactions||[];
+  db.projects=db.projects||[];
+  db.snapshots=db.snapshots||{};   // month key -> total investment value that month
+  db.recurring=db.recurring||[];   // fixed monthly expenses
+  db.budgets=db.budgets||{};       // category -> monthly target
+  db.goal=db.goal||{label:'',target:0};
+  db.events=db.events||[];         // single-event expense ledgers (e.g. a trip)
+  if(db.activeMonth===undefined)db.activeMonth=null; // null = follow real date
+  CURKEY=db.activeMonth||realKey();
+  selMonth=CURKEY;
+  if(!db.osh)db.osh={base:0,month:CURKEY};  // checking account: base = opening balance of osh.month
+  recordSnapshot();
+  if(postRecurring())await save();
+}
+async function saveNow(){
+  recordSnapshot();
+  const ok=await storeSet(KEY,JSON.stringify(db));
+  if(ok){memoryOnly=false;showSaveState('saved');}
+  else{memoryOnly=true;showSaveState('error');}
+}
+const save=saveNow;                 // mutations await save() then render()
+let saveTimer=null;
+function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveNow,300);}
+let saveStateTimer=null;
+function showSaveState(s){
+  const el=document.getElementById('savestate');if(!el)return;
+  clearTimeout(saveStateTimer);
+  if(s==='saved'){el.textContent='✓ נשמר';el.className='savestate ok';
+    saveStateTimer=setTimeout(()=>{el.textContent='';el.className='savestate';},1600);}
+  else if(s==='error'){el.textContent='⚠️ לא נשמר';el.className='savestate bad';}
+}
+const uid=()=>Math.random().toString(36).slice(2,10);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- money & dates ---------- */
+const ILS=n=>new Intl.NumberFormat('he-IL',{style:'currency',currency:'ILS',maximumFractionDigits:0}).format(n||0);
+const groupNum=n=>(+n||0).toLocaleString('he-IL');
+const parseNum=s=>{s=String(s);const v=parseFloat(s.replace(/[^\d.]/g,''))||0;return /[-−]/.test(s)?-v:v;};
+const now=()=>new Date();
+const mkey=d=>{d=new Date(d);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');};
+let CURKEY=mkey(now());            // the "current" working month (can be overridden by the user)
+const realKey=()=>mkey(now());
+let selMonth=CURKEY;               // month shown in תזרים
+function sameMonth(ts){return mkey(ts)===CURKEY;}          // "this month" for the hero
+function inMonth(ts,key){return mkey(ts)===key;}
+function monthLabel(key){const[y,m]=key.split('-');return new Date(y,m-1,1).toLocaleDateString('he-IL',{month:'long',year:'numeric'});}
+function shortMonth(key){const[y,m]=key.split('-');return new Date(y,m-1,1).toLocaleDateString('he-IL',{month:'short'});}
+function shiftKey(key,delta){const[y,m]=key.split('-').map(Number);const d=new Date(y,m-1+delta,1);return mkey(d);}
+function firstOfMonth(key){const[y,m]=key.split('-').map(Number);return new Date(y,m-1,1,12,0,0).getTime();}
+/* create auto expenses for every month from each recurring item's start up to now */
+function postRecurring(){
+  let created=false;
+  (db.recurring||[]).forEach(r=>{
+    let m=r.startMonth||CURKEY,guard=0;
+    while(m<=CURKEY && guard<240){
+      const skipped=(r.skip||[]).includes(m);
+      const exists=db.transactions.some(t=>t.recurringId===r.id && t.recurringMonth===m);
+      if(!skipped && !exists){
+        db.transactions.push({id:uid(),kind:'expense',category:r.category,amount:+r.amount||0,
+          note:r.name,date:firstOfMonth(m),recurringId:r.id,recurringMonth:m});
+        created=true;
+      }
+      m=shiftKey(m,1);guard++;
+    }
+  });
+  return created;
+}
+document.getElementById('today').textContent=now().toLocaleDateString('he-IL',{day:'numeric',month:'long'});
+
+/* ---------- categories ---------- */
+const CATS=[
+  {id:'housing',label:'דיור',emoji:'🏠',kw:['שכירות','שכר דירה','משכנתא','דיור','ועד בית','ארנונה']},
+  {id:'food',label:'מזון',emoji:'🍽️',kw:['סופר','מכולת','אוכל','מסעדה','קפה','גלידה','קניות','שופרסל','רמי לוי','ירקות']},
+  {id:'bills',label:'חשבונות',emoji:'💡',kw:['חשמל','מים','אינטרנט','טלפון','סלולר','ביטוח','גז','חשבון']},
+  {id:'car',label:'רכב',emoji:'🚗',kw:['רכב','דלק','תדלוק','חניה','חנייה','טסט','רישוי','מוסך','צמיגים','ביטוח רכב']},
+  {id:'leisure',label:'בילוי',emoji:'🍸',kw:['בילוי','בילויים','בר','פאב','יציאה','מועדון','הופעה']},
+  {id:'vacation',label:'חופשה',emoji:'✈️',kw:['חופשה','טיול','מלון','טיסה','נופש','צימר','חו״ל']},
+  {id:'tech',label:'טכנולוגיה ובידור',emoji:'📱',kw:['טכנולוגיה','גאדג׳ט','נטפליקס','סטרימינג','מנוי','משחק','משחקים','אלקטרוניקה','ספוטיפיי']},
+  {id:'business',label:'הוצאות עסק',emoji:'💼',kw:['עסק','עסקי','ציוד','ספק','ספקים','פרסום','שיווק','משרד']},
+  {id:'health',label:'בריאות',emoji:'⚕️',kw:['רופא','בריאות','תרופות','תרופה','מרפאה','שיניים','שיננית','בדיקה','קופת חולים','פיזיותרפיה','משקפיים','אופטומטריסט']},
+  {id:'classes',label:'חוגים',emoji:'🎨',kw:['חוג','חוגים','שיעור','קורס','אימון','ריקוד','שחייה','מוזיקה','גיטרה','התעמלות','חוג ספורט']},
+  {id:'oneoff',label:'הוצאה חד פעמית',emoji:'⭐',kw:['חד פעמי','חד-פעמי','חד פעמית']},
+  {id:'general',label:'כללי',emoji:'🧩',kw:[]}
+];
+const catById=id=>CATS.find(c=>c.id===id)||CATS[CATS.length-1];
+
+/* ---------- nav ---------- */
+let cur='overview';
+function go(v){
+  cur=v;
+  document.querySelectorAll('.view').forEach(s=>s.classList.remove('on'));
+  document.getElementById('v-'+v).classList.add('on');
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  render();
+  window.scrollTo(0,0);
+}
+
+/* ---------- render ---------- */
+function monthTotals(key){
+  key=key||CURKEY;let inc=0,exp=0;
+  db.transactions.forEach(t=>{if(inMonth(t.date,key)){t.kind==='income'?inc+=t.amount:exp+=t.amount;}});
+  return {inc,exp,net:inc-exp};
+}
+/* ---------- net worth ---------- */
+const investTotalNow=()=>db.investments.reduce((s,i)=>s+(+i.value||0),0);
+function recordSnapshot(){db.snapshots[CURKEY]=investTotalNow();}
+function investAt(key){
+  const ks=Object.keys(db.snapshots).sort();
+  if(!ks.length)return investTotalNow();
+  let chosen=null;ks.forEach(k=>{if(k<=key)chosen=k;});
+  return db.snapshots[chosen!==null?chosen:ks[0]];
+}
+function cashAt(key){          // cumulative income − expenses up to & including month key
+  let s=0;db.transactions.forEach(t=>{if(mkey(t.date)<=key)s+=(t.kind==='income'?t.amount:-t.amount);});
+  return s;
+}
+/* ---------- checking account (עו״ש) ---------- */
+// base = balance at the START of db.osh.month; roll forward/back with monthly net flow
+function oshOpening(key){
+  const base=+((db.osh&&db.osh.base)||0);
+  const bm=(db.osh&&db.osh.month)||CURKEY;
+  let bal=base,m;
+  if(key>bm){m=bm;while(m<key){bal+=monthTotals(m).net;m=shiftKey(m,1);}}
+  else if(key<bm){m=key;while(m<bm){bal-=monthTotals(m).net;m=shiftKey(m,1);}}
+  return bal;
+}
+const oshEnd=key=>oshOpening(key)+monthTotals(key).net;   // balance at end of / during month
+const netWorthAt=key=>investAt(key)+oshEnd(key);
+function render(){
+  const m=monthTotals(CURKEY);
+  const avail=oshEnd(CURKEY);
+  document.getElementById('active-month').textContent=monthLabel(CURKEY)+(db.activeMonth?'':' • אוטומטי');
+  const hnet=document.getElementById('h-net');
+  hnet.textContent=ILS(avail);
+  hnet.style.color=avail<0?'#B23A48':'#1E7F5C';
+  document.getElementById('h-in').textContent=ILS(m.inc);
+  document.getElementById('h-ex').textContent=ILS(m.exp);
+  const invTotal=db.investments.reduce((s,i)=>s+ (+i.value||0),0);
+  document.getElementById('ov-inv').textContent=ILS(invTotal);
+  document.getElementById('ov-nw').textContent=ILS(netWorthAt(CURKEY));
+  document.getElementById('ov-osh').textContent=ILS(avail);
+  const projPend=db.projects.filter(p=>p.status!=='paid').reduce((s,p)=>s+(+p.amount||0),0);
+  document.getElementById('ov-proj').textContent=ILS(projPend);
+
+  renderAlerts(avail);
+  renderInvest(); renderFlow(); renderProj(); renderStats(); renderFixed(); renderEvents();
+  if(curEvent&&document.getElementById('v-eventdetail').classList.contains('on'))renderEventDetail();
+}
+/* ---------- proactive alerts (low balance / budget overruns) ---------- */
+function renderAlerts(avail){
+  const el=document.getElementById('alerts');if(!el)return;
+  const alerts=[];
+  if(avail<0){
+    alerts.push({cls:'danger',ico:'🚨',txt:'יתרת העו״ש שלילית — אתם במינוס של '+ILS(Math.abs(avail))+'.'});
+  }else if(avail>0&&avail<1000){
+    alerts.push({cls:'warn',ico:'⚠️',txt:'יתרת העו״ש נמוכה: נותרו '+ILS(avail)+' החודש.'});
+  }
+  const sums={};CATS.forEach(c=>sums[c.id]=0);
+  db.transactions.forEach(t=>{if(t.kind==='expense'&&inMonth(t.date,CURKEY))sums[t.category]=(sums[t.category]||0)+t.amount;});
+  const over=CATS.filter(c=>{const b=+(db.budgets[c.id]||0);return b>0&&sums[c.id]>b;});
+  if(over.length){
+    alerts.push({cls:'warn',ico:'📉',txt:'חריגה מהתקציב: '+over.map(c=>c.label+' ('+ILS(sums[c.id]-(+db.budgets[c.id]))+' מעל)').join(', ')});
+  }
+  el.innerHTML=alerts.map(a=>`<div class="alert ${a.cls}"><span class="aico">${a.ico}</span><span>${a.txt}</span></div>`).join('');
+}
+/* ---------- current-month picker ---------- */
+let pickKey=CURKEY;
+function openMonthPicker(){pickKey=CURKEY;renderPick();openSheet('sheet-month');}
+function renderPick(){document.getElementById('mpick-label').textContent=monthLabel(pickKey);}
+function pickStep(delta){pickKey=shiftKey(pickKey,delta);renderPick();}
+async function setActiveMonth(key){
+  db.activeMonth=key;                 // key string, or null for auto
+  CURKEY=key||realKey();
+  selMonth=CURKEY;
+  recordSnapshot();postRecurring();
+  await save();closeSheet();render();
+}
+function applyMonth(){setActiveMonth(pickKey);}
+function applyAuto(){setActiveMonth(null);}
+/* ---------- checking account edit ---------- */
+function openOsh(){
+  document.getElementById('osh-input').value=groupNum(Math.round(oshEnd(CURKEY)));
+  openSheet('sheet-osh');
+}
+async function saveOsh(){
+  const entered=parseNum(document.getElementById('osh-input').value);
+  // store as opening balance of the active month, so "available" now equals what was entered
+  db.osh={base:entered-monthTotals(CURKEY).net,month:CURKEY};
+  await save();closeSheet();render();
+}
+/* ---------- month navigation (תזרים) ---------- */
+const maxBrowse=()=>(CURKEY>realKey()?CURKEY:realKey());   // don't browse past the current month
+function stepMonth(delta){
+  const target=shiftKey(selMonth,delta);
+  if(target>maxBrowse())return;
+  selMonth=target;renderFlow();
+}
+function renderInvest(){
+  document.getElementById('inv-total').textContent=ILS(investTotalNow());
+  const el=document.getElementById('inv-list');
+  el.innerHTML=db.investments.map(i=>{
+    const info=kindInfo(i.kind);
+    return `<div class="inv-edit">
+      <div class="dot gold" onclick="editInv('${i.id}')">${info.emoji}</div>
+      <div class="t" onclick="editInv('${i.id}')">${esc(i.name)||info.label}</div>
+      <input type="text" inputmode="numeric" data-inv="${i.id}" value="${i.value?groupNum(i.value):''}" placeholder="0"
+        oninput="stageInv('${i.id}',this.value)" onblur="commitInv()">
+    </div>`;}).join('');
+}
+function renderFlow(){
+  // navigator
+  const mt=monthTotals(selMonth);
+  document.getElementById('mnav-label').textContent=monthLabel(selMonth)+(selMonth===CURKEY?' • הנוכחי':'');
+  const netEl=document.getElementById('mnav-net');
+  netEl.textContent=(mt.net>=0?'+':'−')+ILS(Math.abs(mt.net));
+  netEl.className='mnav-net num '+(mt.net>=0?'pos':'neg');
+  document.getElementById('older-lbl').textContent=shortMonth(shiftKey(selMonth,-1));
+  const canNewer=selMonth<maxBrowse();
+  document.getElementById('mnav-newer').disabled=!canNewer;
+  document.getElementById('newer-lbl').textContent=canNewer?shortMonth(shiftKey(selMonth,1)):'';
+
+  // checking account card for the shown month
+  const avail=oshEnd(selMonth);
+  const availEl=document.getElementById('osh-avail');
+  availEl.textContent=ILS(avail);
+  availEl.className='osh-big num'+(avail<0?' neg':'');
+  document.getElementById('osh-open').textContent=ILS(oshOpening(selMonth));
+  document.getElementById('osh-in').textContent=ILS(mt.inc);
+  document.getElementById('osh-ex').textContent=ILS(mt.exp);
+
+  const chips=document.getElementById('cat-chips');
+  const sums={};CATS.forEach(c=>sums[c.id]=0);
+  db.transactions.forEach(t=>{if(t.kind==='expense'&&inMonth(t.date,selMonth))sums[t.category]=(sums[t.category]||0)+t.amount;});
+  chips.innerHTML=CATS.map(c=>{
+    const spent=sums[c.id],bud=+(db.budgets[c.id]||0);
+    let extra='';
+    if(bud>0){
+      const pct=Math.min(100,spent/bud*100),over=spent>bud;
+      extra=`<div class="cbud">מתוך ${groupNum(bud)}</div><div class="ctrack"><i class="${over?'over':''}" style="width:${pct}%"></i></div>`;
+    }
+    return `<div class="chip"><div class="cn">${c.emoji} ${c.label}</div><div class="cv num">${ILS(spent)}</div>${extra}</div>`;
+  }).join('');
+
+  const list=document.getElementById('flow-list');
+  const txns=db.transactions.filter(t=>inMonth(t.date,selMonth)).sort((a,b)=>b.date-a.date);
+  if(!txns.length){list.innerHTML=`<div class="empty"><div class="e-emoji">🧾</div><p>אין תנועות בחודש זה. הוסיפו הוצאה או הכנסה בקול מהמסך הראשי.</p></div>`;return;}
+  list.innerHTML='<div class="list">'+txns.map(t=>{
+    const isInc=t.kind==='income';const c=catById(t.category);
+    const rec=t.recurringId?' 🔁':(t.eventId?' 🧳':'');
+    return `<div class="item">
+      <div class="dot ${isInc?'in':'ex'}" onclick="editTxn('${t.id}')">${isInc?'⬆️':c.emoji}</div>
+      <div class="mid" onclick="editTxn('${t.id}')"><div class="t">${esc(t.note)||(isInc?'הכנסה':c.label)}${rec}</div>
+      <div class="s">${isInc?'הכנסה':c.label} · ${new Date(t.date).toLocaleDateString('he-IL',{day:'numeric',month:'short'})}</div></div>
+      <div class="amt ${isInc?'in':'ex'} num" onclick="editTxn('${t.id}')">${isInc?'+':'−'}${ILS(t.amount)}</div>
+      <button class="del" onclick="delTxn('${t.id}')">✕</button>
+    </div>`;}).join('')+'</div>';
+}
+function renderProj(){
+  const list=document.getElementById('proj-list');
+  if(!db.projects.length){list.innerHTML=`<div class="empty"><div class="e-emoji">🧩</div><p>אין פרויקטים עדיין. הוסיפו פרויקט כדי לא לשכוח לחייב לקוחות.</p></div>`;return;}
+  const lbl={pending:'ממתין',invoiced:'חשבונית נשלחה',paid:'שולם'};
+  list.innerHTML='<div class="list">'+db.projects.map(p=>`
+    <div class="item">
+      <div class="dot ${p.status==='paid'?'in':'gold'}" onclick="editProj('${p.id}')">${p.status==='paid'?'✅':'🧾'}</div>
+      <div class="mid" onclick="editProj('${p.id}')"><div class="t">${esc(p.name)}</div><div class="s">${esc(p.client)||'—'}</div></div>
+      <div style="text-align:left">
+        <div class="amt num" onclick="editProj('${p.id}')">${ILS(p.amount)}</div>
+        <div style="margin-top:4px"><span class="pill ${p.status}" onclick="cycleStatus('${p.id}')">${lbl[p.status]}</span></div>
+      </div>
+      <button class="del" onclick="delProj('${p.id}')">✕</button>
+    </div>`).join('')+'</div>';
+}
+
+/* ---------- statistics ---------- */
+function renderNetWorth(){
+  const keys=[];for(let i=5;i>=0;i--)keys.push(shiftKey(CURKEY,-i));
+  const nw=keys.map(k=>netWorthAt(k));
+  const cur=nw[nw.length-1],start=nw[0],change=cur-start;
+  const col=change>=0?'#1E7F5C':'#B23A48';
+  const W=300,H=120,PX=8;
+  const min=Math.min(...nw),max=Math.max(...nw),range=(max-min)||1;
+  const x=i=>(W-PX)-(i/(nw.length-1))*(W-2*PX);
+  const y=v=>range?106-((v-min)/range)*88:60;
+  const pts=nw.map((v,i)=>[x(i),y(v)]);
+  const line=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const area=line+` L ${pts[nw.length-1][0].toFixed(1)} ${H} L ${pts[0][0].toFixed(1)} ${H} Z`;
+  const end=pts[nw.length-1];
+  const gid='nwg'+(change>=0?'p':'n');
+  const labels=keys.map(k=>`<span>${k===CURKEY?'החודש':shortMonth(k)}</span>`).join('');
+  return `<div class="panel">
+    <h3>שווי נקי</h3>
+    <div class="nw-head">
+      <div class="nw-big num">${ILS(cur)}</div>
+      <div class="nw-chg ${change>=0?'pos':'neg'}">${change>=0?'▲':'▼'} <span class="num">${ILS(Math.abs(change))}</span></div>
+    </div>
+    <svg class="nwchart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+      <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="${col}" stop-opacity="0.26"/>
+        <stop offset="1" stop-color="${col}" stop-opacity="0"/>
+      </linearGradient></defs>
+      <path d="${area}" fill="url(#${gid})"/>
+      <path d="${line}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      <circle cx="${end[0].toFixed(1)}" cy="${end[1].toFixed(1)}" r="4" fill="${col}"/>
+    </svg>
+    <div class="nw-labels">${labels}</div>
+    <div class="hint">שווי ההשקעות בתוספת יתרת העו״ש.</div>
+  </div>`;
+}
+function renderGoal(){
+  const g=db.goal||{};const nw=netWorthAt(CURKEY);
+  if(!g.target||g.target<=0){
+    return `<div class="panel" onclick="openGoal()" style="cursor:pointer">
+      <h3>יעד חיסכון</h3>
+      <p style="color:var(--ink-soft);font-size:13px">הקישו כדי לקבוע יעד — ותעקבו אחרי ההתקדמות מול השווי הנקי.</p></div>`;
+  }
+  const pct=Math.max(0,Math.min(100,nw/g.target*100));
+  const done=nw>=g.target;
+  return `<div class="panel" onclick="openGoal()" style="cursor:pointer">
+    <div class="nw-head"><h3 style="margin:0">${esc(g.label)||'יעד חיסכון'}</h3>
+      <div class="nw-chg ${done?'pos':''}">${Math.round(pct)}%</div></div>
+    <div class="track" style="height:12px;margin:6px 0 10px"><i style="width:${pct}%;${done?'background:var(--income)':''}"></i></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--ink-soft)">
+      <span class="num">${ILS(nw)}</span><span class="num">${ILS(g.target)}</span></div>
+    ${done?'<div class="hint" style="color:var(--income)">🎉 הגעת ליעד!</div>':`<div class="hint">נותרו ${ILS(g.target-nw)}</div>`}
+  </div>`;
+}
+function exportPanel(){
+  return `<div class="panel"><h3>גיבוי ונתונים</h3>
+    <p style="color:var(--ink-soft);font-size:13px;margin-bottom:12px">גיבוי בהעתקת טקסט — עובד בכל מכשיר. שמרו את הטקסט בפתקים או שלחו לעצמכם, ולשחזור הדביקו אותו בחזרה.</p>
+    <button class="save" onclick="openBackup()">🔐 גיבוי ושחזור</button>
+    <button class="save" style="background:none;color:var(--ink-soft);margin-top:8px" onclick="exportCSV()">ייצוא לאקסל (CSV)</button></div>`;
+}
+function renderStats(){
+  const body=document.getElementById('stats-body');
+  const goalHtml=renderGoal(),exportHtml=exportPanel();
+  if(!db.transactions.length && investTotalNow()===0){
+    body.innerHTML=goalHtml+`<div class="empty"><div class="e-emoji">📊</div><p>עדיין אין מספיק נתונים. הוסיפו תנועות או עדכנו את ההשקעות והסטטיסטיקה תופיע כאן.</p></div>`;return;
+  }
+  const nwHtml=renderNetWorth();
+  if(!db.transactions.length){
+    body.innerHTML=goalHtml+nwHtml+exportHtml;return;
+  }
+  // last 6 months keys (oldest -> newest)
+  const keys=[];for(let i=5;i>=0;i--)keys.push(shiftKey(CURKEY,-i));
+  const data=keys.map(k=>({k,...monthTotals(k)}));
+  const max=Math.max(1,...data.map(d=>Math.max(d.inc,d.exp)));
+
+  // averages over months that actually have activity
+  const active=data.filter(d=>d.inc||d.exp);
+  const avgIn=active.length?active.reduce((s,d)=>s+d.inc,0)/active.length:0;
+  const avgEx=active.length?active.reduce((s,d)=>s+d.exp,0)/active.length:0;
+  const savingRate=avgIn>0?Math.round((avgIn-avgEx)/avgIn*100):0;
+
+  // category breakdown for selected month (or current)
+  const brKey=selMonth;
+  const catSums={};CATS.forEach(c=>catSums[c.id]=0);
+  db.transactions.forEach(t=>{if(t.kind==='expense'&&inMonth(t.date,brKey))catSums[t.category]+=t.amount;});
+  const catTotal=Object.values(catSums).reduce((a,b)=>a+b,0);
+  const ranked=CATS.map(c=>({...c,sum:catSums[c.id]})).filter(c=>c.sum>0).sort((a,b)=>b.sum-a.sum);
+
+  const chart=`
+    <div class="panel">
+      <h3>הכנסות מול הוצאות · 6 חודשים</h3>
+      <div class="bars">${data.map(d=>{
+        const sel=d.k===brKey?'sel':'';
+        return `<div class="barcol ${sel}" onclick="selMonth='${d.k}';renderFlow();renderStats()">
+          <div class="barpair">
+            <div class="bar in" style="height:${d.inc/max*100}%" title="${ILS(d.inc)}"></div>
+            <div class="bar ex" style="height:${d.exp/max*100}%" title="${ILS(d.exp)}"></div>
+          </div>
+          <div class="bl">${d.k===CURKEY?'החודש':shortMonth(d.k)}</div>
+        </div>`;}).join('')}</div>
+      <div class="legend"><span><i style="background:var(--income)"></i>הכנסות</span><span><i style="background:var(--expense)"></i>הוצאות</span></div>
+    </div>`;
+
+  const kpis=`
+    <div class="kpis">
+      <div class="kpi"><div class="k">הכנסה חודשית ממוצעת</div><div class="v num">${ILS(avgIn)}</div></div>
+      <div class="kpi"><div class="k">הוצאה חודשית ממוצעת</div><div class="v num">${ILS(avgEx)}</div></div>
+      <div class="kpi"><div class="k">חיסכון חודשי ממוצע</div><div class="v num ${avgIn-avgEx>=0?'pos':'neg'}">${ILS(avgIn-avgEx)}</div></div>
+      <div class="kpi"><div class="k">שיעור חיסכון</div><div class="v ${savingRate>=0?'pos':'neg'}"><span class="num">${savingRate}%</span></div></div>
+    </div>`;
+
+  const breakdown=`
+    <div class="panel">
+      <h3>פילוח הוצאות · ${brKey===CURKEY?'החודש':monthLabel(brKey)}</h3>
+      ${ranked.length?ranked.map(c=>`
+        <div class="cbar">
+          <div class="top"><span class="cl">${c.emoji} ${c.label}</span><span class="cv"><span class="num">${ILS(c.sum)}</span> · ${Math.round(c.sum/catTotal*100)}%</span></div>
+          <div class="track"><i style="width:${c.sum/catTotal*100}%"></i></div>
+        </div>`).join(''):'<p style="color:var(--ink-soft);font-size:13px">אין הוצאות בחודש זה.</p>'}
+    </div>`;
+
+  body.innerHTML=goalHtml+nwHtml+chart+kpis+breakdown+exportHtml;
+}
+
+/* ---------- investments ---------- */
+async function updInv(id,val){
+  const inv=db.investments.find(i=>i.id===id);if(!inv)return;
+  inv.value=parseNum(val);inv.updatedAt=Date.now();recordSnapshot();await save();render();
+}
+// live save while typing (no re-render so focus is kept), then commit on blur
+function stageInv(id,val){
+  const inv=db.investments.find(i=>i.id===id);if(!inv)return;
+  inv.value=parseNum(val);inv.updatedAt=Date.now();
+  document.getElementById('inv-total').textContent=ILS(investTotalNow());
+  scheduleSave();
+}
+function commitInv(){saveNow();render();}
+// pull any values currently in the investment inputs into the model (safety net on exit)
+function flushInvInputs(){
+  document.querySelectorAll('#inv-list input[data-inv]').forEach(inp=>{
+    const inv=db.investments.find(i=>i.id===inp.getAttribute('data-inv'));
+    if(inv)inv.value=parseNum(inp.value);
+  });
+}
+let editingInv=null;
+function fillKindOptions(sel){
+  sel.innerHTML=Object.keys(KINDS).map(k=>`<option value="${k}">${kindInfo(k).emoji} ${kindInfo(k).label}</option>`).join('');
+}
+function invKindChanged(){
+  // when adding, suggest the type's default name as placeholder
+  const k=document.getElementById('inv-kind').value;
+  const nameEl=document.getElementById('inv-name');
+  if(!editingInv) nameEl.placeholder=kindInfo(k).label;
+}
+function openInv(){
+  editingInv=null;
+  const sel=document.getElementById('inv-kind');fillKindOptions(sel);sel.value='savings';
+  document.getElementById('inv-title').textContent='אפיק השקעה חדש';
+  document.getElementById('inv-name').value='';
+  document.getElementById('inv-name').placeholder=kindInfo('savings').label;
+  document.getElementById('inv-value').value='';
+  document.getElementById('inv-del').style.display='none';
+  openSheet('sheet-inv');
+}
+function editInv(id){
+  const inv=db.investments.find(i=>i.id===id);if(!inv)return;
+  editingInv=id;
+  const sel=document.getElementById('inv-kind');fillKindOptions(sel);sel.value=inv.kind in KINDS?inv.kind:'other';
+  document.getElementById('inv-title').textContent='עריכת אפיק';
+  document.getElementById('inv-name').value=inv.name||'';
+  document.getElementById('inv-name').placeholder=kindInfo(inv.kind).label;
+  document.getElementById('inv-value').value=inv.value?groupNum(inv.value):'';
+  document.getElementById('inv-del').style.display='block';
+  openSheet('sheet-inv');
+}
+async function saveInv(){
+  const kind=document.getElementById('inv-kind').value;
+  const name=document.getElementById('inv-name').value.trim()||kindInfo(kind).label;
+  const value=parseNum(document.getElementById('inv-value').value);
+  if(editingInv){
+    const inv=db.investments.find(i=>i.id===editingInv);
+    if(inv){inv.kind=kind;inv.name=name;inv.value=value;inv.updatedAt=Date.now();}
+    editingInv=null;
+  }else{
+    db.investments.push({id:uid(),name,kind,value,updatedAt:Date.now()});
+  }
+  recordSnapshot();await save();closeSheet();render();
+}
+async function delInvConfirm(){
+  if(!editingInv)return;
+  db.investments=db.investments.filter(i=>i.id!==editingInv);
+  editingInv=null;recordSnapshot();await save();closeSheet();render();
+}
+
+/* ---------- recurring (fixed) expenses ---------- */
+function recTotal(){return (db.recurring||[]).reduce((s,r)=>s+(+r.amount||0),0);}
+function renderFixed(){
+  document.getElementById('rec-total').textContent=ILS(recTotal());
+  const list=document.getElementById('rec-list');
+  if(!db.recurring.length){list.innerHTML=`<div class="empty"><div class="e-emoji">🔁</div><p>אין הוצאות קבועות. הוסיפו ביטוחים, מנויים וכל תשלום חוזר.</p></div>`;return;}
+  list.innerHTML='<div class="list">'+db.recurring.map(r=>{
+    const c=catById(r.category);
+    return `<div class="item">
+      <div class="dot ex" onclick="editRec('${r.id}')">${c.emoji}</div>
+      <div class="mid" onclick="editRec('${r.id}')"><div class="t">${esc(r.name)}</div><div class="s">${c.label} · כל חודש</div></div>
+      <div class="amt ex num" onclick="editRec('${r.id}')">${ILS(r.amount)}</div>
+      <button class="del" onclick="delRecById('${r.id}')">✕</button>
+    </div>`;}).join('')+'</div>';
+}
+let editingRec=null,recCat='bills';
+function renderRecCats(){
+  document.getElementById('rec-cats').innerHTML=CATS.map(c=>
+    `<button class="${c.id===recCat?'on':''}" onclick="recCat='${c.id}';renderRecCats()">${c.emoji} ${c.label}</button>`).join('');
+}
+function openRec(){
+  editingRec=null;recCat='bills';
+  document.getElementById('rec-title').textContent='הוצאה קבועה חדשה';
+  document.getElementById('rec-name').value='';
+  document.getElementById('rec-amt').value='';
+  document.getElementById('rec-del').style.display='none';
+  renderRecCats();openSheet('sheet-rec');
+}
+function editRec(id){
+  const r=db.recurring.find(x=>x.id===id);if(!r)return;
+  editingRec=id;recCat=r.category;
+  document.getElementById('rec-title').textContent='עריכת הוצאה קבועה';
+  document.getElementById('rec-name').value=r.name;
+  document.getElementById('rec-amt').value=r.amount?groupNum(r.amount):'';
+  document.getElementById('rec-del').style.display='block';
+  renderRecCats();openSheet('sheet-rec');
+}
+async function saveRec(){
+  const name=document.getElementById('rec-name').value.trim();
+  const amount=parseNum(document.getElementById('rec-amt').value);
+  if(!name){document.getElementById('rec-name').focus();return;}
+  if(editingRec){
+    const r=db.recurring.find(x=>x.id===editingRec);
+    if(r){r.name=name;r.amount=amount;r.category=recCat;
+      // update the current month's auto expense to match (past months stay as billed)
+      const t=db.transactions.find(t=>t.recurringId===r.id && t.recurringMonth===CURKEY);
+      if(t){t.amount=amount;t.note=name;t.category=recCat;}
+    }
+    editingRec=null;
+  }else{
+    const r={id:uid(),name,amount,category:recCat,startMonth:CURKEY,skip:[]};
+    db.recurring.push(r);postRecurring();
+  }
+  await save();closeSheet();render();
+}
+async function delRec(){if(editingRec){await delRecById(editingRec);editingRec=null;closeSheet();}}
+async function delRecById(id){
+  db.recurring=db.recurring.filter(r=>r.id!==id);
+  // remove current & future auto expenses for this item; keep past history
+  db.transactions=db.transactions.filter(t=>!(t.recurringId===id && t.recurringMonth>=CURKEY));
+  await save();render();
+}
+
+/* ---------- events (single-event expense ledger) ---------- */
+const eventTotal=ev=>(ev.items||[]).reduce((s,i)=>s+(+i.amount||0),0);
+function renderEvents(){
+  const list=document.getElementById('events-list');
+  if(!db.events.length){list.innerHTML=`<div class="empty"><div class="e-emoji">🧳</div><p>אין אירועים. הוסיפו אירוע כדי לתעד הוצאות של טיול או אירוע.</p></div>`;return;}
+  list.innerHTML='<div class="list">'+db.events.map(ev=>{
+    const c=catById(ev.category);
+    return `<div class="item">
+      <div class="dot ${ev.transferred?'in':'ex'}" onclick="openEvent('${ev.id}')">🧳</div>
+      <div class="mid" onclick="openEvent('${ev.id}')"><div class="t">${esc(ev.name)}</div>
+      <div class="s">${(ev.items||[]).length} הוצאות · ${ev.transferred?'הועבר לסיכום':'טיוטה'}</div></div>
+      <div class="amt ex num" onclick="openEvent('${ev.id}')">${ILS(eventTotal(ev))}</div>
+    </div>`;}).join('')+'</div>';
+}
+let curEvent=null;
+function newEvent(){
+  eventDraftCat='vacation';editingEvent=null;
+  document.getElementById('event-title').textContent='אירוע חדש';
+  document.getElementById('event-name').value='';
+  document.getElementById('event-del').style.display='none';
+  renderEventCats();openSheet('sheet-event');
+}
+let editingEvent=null,eventDraftCat='vacation';
+function renderEventCats(){
+  document.getElementById('event-cats').innerHTML=CATS.map(c=>
+    `<button class="${c.id===eventDraftCat?'on':''}" onclick="eventDraftCat='${c.id}';renderEventCats()">${c.emoji} ${c.label}</button>`).join('');
+}
+function editEventInfo(){
+  const ev=db.events.find(e=>e.id===curEvent);if(!ev)return;
+  editingEvent=ev.id;eventDraftCat=ev.category;
+  document.getElementById('event-title').textContent='עריכת אירוע';
+  document.getElementById('event-name').value=ev.name;
+  document.getElementById('event-del').style.display='block';
+  renderEventCats();openSheet('sheet-event');
+}
+async function saveEvent(){
+  const name=document.getElementById('event-name').value.trim();
+  if(!name){document.getElementById('event-name').focus();return;}
+  if(editingEvent){
+    const ev=db.events.find(e=>e.id===editingEvent);
+    if(ev){ev.name=name;ev.category=eventDraftCat;syncEventExpense(ev);}
+    editingEvent=null;await save();closeSheet();
+    if(curEvent)renderEventDetail();render();
+  }else{
+    const ev={id:uid(),name,category:eventDraftCat,items:[],transferred:false,linkedTxn:null,date:Date.now()};
+    db.events.push(ev);curEvent=ev.id;await save();closeSheet();go('eventdetail');
+  }
+}
+async function delEvent(){
+  if(!editingEvent)return;
+  const ev=db.events.find(e=>e.id===editingEvent);
+  if(ev&&ev.linkedTxn)db.transactions=db.transactions.filter(t=>t.id!==ev.linkedTxn);
+  db.events=db.events.filter(e=>e.id!==editingEvent);
+  editingEvent=null;curEvent=null;await save();closeSheet();go('events');
+}
+function openEvent(id){curEvent=id;go('eventdetail');}
+function renderEventDetail(){
+  const ev=db.events.find(e=>e.id===curEvent);if(!ev)return;
+  document.getElementById('ev-name').textContent=ev.name;
+  const c=catById(ev.category);
+  const items=(ev.items||[]);
+  const total=eventTotal(ev);
+  const itemsHtml=items.length?('<div class="list">'+items.map(it=>`
+    <div class="item">
+      <div class="mid" onclick="editEItem('${it.id}')"><div class="t">${esc(it.name)||'הוצאה'}</div></div>
+      <div class="amt ex num" onclick="editEItem('${it.id}')">${ILS(it.amount)}</div>
+      <button class="del" onclick="delEItemById('${it.id}')">✕</button>
+    </div>`).join('')+'</div>'):`<div class="empty"><div class="e-emoji">🧾</div><p>אין הוצאות עדיין. הוסיפו את ההוצאה הראשונה.</p></div>`;
+  document.getElementById('eventdetail-body').innerHTML=`
+    <div class="inv-total"><span>${c.emoji} ${c.label} · סה״כ</span><span class="num">${ILS(total)}</span></div>
+    <div class="btns" style="margin-bottom:12px">
+      <button class="add" onclick="editEventInfo()">עריכת פרטים</button>
+      <button class="add" onclick="openEItem()">+ הוסף הוצאה</button>
+    </div>
+    ${itemsHtml}
+    <button class="save" style="margin-top:14px;${ev.transferred?'background:var(--expense)':''}" onclick="toggleTransfer()">
+      ${ev.transferred?'בטל העברה לסיכום':'העבר לסיכום הכללי'}
+    </button>
+    <div class="hint" style="text-align:center">${ev.transferred?'הסכום נכלל בתזרים ובשווי הנקי.':'כרגע ההוצאות מתועדות רק כאן ואינן משפיעות על התזרים.'}</div>`;
+}
+// event items
+let editingEItem=null;
+function openEItem(){
+  editingEItem=null;
+  document.getElementById('eitem-title').textContent='הוצאה באירוע';
+  document.getElementById('eitem-name').value='';
+  document.getElementById('eitem-amt').value='';
+  document.getElementById('eitem-del').style.display='none';
+  openSheet('sheet-eitem');
+}
+function editEItem(id){
+  const ev=db.events.find(e=>e.id===curEvent);if(!ev)return;
+  const it=ev.items.find(x=>x.id===id);if(!it)return;
+  editingEItem=id;
+  document.getElementById('eitem-title').textContent='עריכת הוצאה';
+  document.getElementById('eitem-name').value=it.name||'';
+  document.getElementById('eitem-amt').value=it.amount?groupNum(it.amount):'';
+  document.getElementById('eitem-del').style.display='block';
+  openSheet('sheet-eitem');
+}
+async function saveEItem(){
+  const ev=db.events.find(e=>e.id===curEvent);if(!ev)return;
+  const name=document.getElementById('eitem-name').value.trim();
+  const amount=parseNum(document.getElementById('eitem-amt').value);
+  if(!amount||amount<=0){document.getElementById('eitem-amt').focus();return;}
+  ev.items=ev.items||[];
+  if(editingEItem){
+    const it=ev.items.find(x=>x.id===editingEItem);if(it){it.name=name;it.amount=amount;}
+    editingEItem=null;
+  }else{
+    ev.items.push({id:uid(),name,amount});
+  }
+  syncEventExpense(ev);await save();closeSheet();renderEventDetail();render();
+}
+async function delEItem(){if(editingEItem){await delEItemById(editingEItem);editingEItem=null;closeSheet();}}
+async function delEItemById(id){
+  const ev=db.events.find(e=>e.id===curEvent);if(!ev)return;
+  ev.items=ev.items.filter(x=>x.id!==id);
+  syncEventExpense(ev);await save();renderEventDetail();render();
+}
+async function toggleTransfer(){
+  const ev=db.events.find(e=>e.id===curEvent);if(!ev)return;
+  ev.transferred=!ev.transferred;syncEventExpense(ev);
+  await save();renderEventDetail();render();
+}
+// keep a single linked expense (= event total) in the main cash flow when transferred
+function syncEventExpense(ev){
+  if(ev.transferred){
+    const total=eventTotal(ev);
+    let t=ev.linkedTxn?db.transactions.find(x=>x.id===ev.linkedTxn):null;
+    if(t){t.amount=total;t.note=ev.name;t.category=ev.category;}
+    else{const date=(CURKEY===realKey())?Date.now():firstOfMonth(CURKEY);
+      t={id:uid(),kind:'expense',category:ev.category,amount:total,note:ev.name,date,eventId:ev.id};
+      db.transactions.push(t);ev.linkedTxn=t.id;}
+  }else if(ev.linkedTxn){
+    db.transactions=db.transactions.filter(t=>t.id!==ev.linkedTxn);ev.linkedTxn=null;
+  }
+}
+
+/* ---------- budget ---------- */
+function openBudget(){
+  document.getElementById('budget-fields').innerHTML=CATS.map(c=>
+    `<div class="field"><label>${c.emoji} ${c.label}</label><input id="bud-${c.id}" type="text" inputmode="numeric" value="${db.budgets[c.id]?groupNum(db.budgets[c.id]):''}" placeholder="0"></div>`).join('');
+  openSheet('sheet-budget');
+}
+async function saveBudget(){
+  CATS.forEach(c=>{db.budgets[c.id]=parseNum(document.getElementById('bud-'+c.id).value);});
+  await save();closeSheet();render();
+}
+
+/* ---------- savings goal ---------- */
+function openGoal(){
+  document.getElementById('goal-label').value=db.goal.label||'';
+  document.getElementById('goal-target').value=db.goal.target?groupNum(db.goal.target):'';
+  openSheet('sheet-goal');
+}
+async function saveGoal(){
+  db.goal={label:document.getElementById('goal-label').value.trim()||'יעד חיסכון',
+    target:parseNum(document.getElementById('goal-target').value)};
+  await save();closeSheet();render();
+}
+
+/* ---------- export to Excel (CSV) ---------- */
+function exportCSV(){
+  const rows=[['תאריך','סוג','קטגוריה','תיאור','סכום']];
+  [...db.transactions].sort((a,b)=>a.date-b.date).forEach(t=>{
+    rows.push([new Date(t.date).toLocaleDateString('he-IL'),
+      t.kind==='income'?'הכנסה':'הוצאה',
+      t.kind==='income'?'הכנסה':catById(t.category).label,
+      (t.note||'').replace(/"/g,'""'), t.amount]);
+  });
+  rows.push([]);rows.push(['אפיק השקעה','שווי']);
+  db.investments.forEach(i=>rows.push([i.name||kindInfo(i.kind).label,i.value||0]));
+  const csv='\uFEFF'+rows.map(r=>r.map(x=>`"${x}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;
+  a.download='הכסף-שלי-'+CURKEY+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function downloadFile(name,text,type){
+  const blob=new Blob([text],{type});const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=name;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function exportBackup(){
+  const stamp=new Date().toISOString().slice(0,10);
+  downloadFile('גיבוי-הכסף-שלי-'+stamp+'.json',JSON.stringify(db),'application/json');
+  showSaveState('saved');
+}
+/* ---------- backup via copy/share (reliable on iPhone webviews) ---------- */
+function openBackup(){
+  document.getElementById('backup-text').value=JSON.stringify(db);
+  document.getElementById('backup-msg').textContent='';
+  openSheet('sheet-backup');
+}
+function backupMsg(t,good){const el=document.getElementById('backup-msg');el.textContent=t;el.style.color=good?'var(--income)':'var(--expense)';}
+async function copyBackup(){
+  const txt=JSON.stringify(db);
+  document.getElementById('backup-text').value=txt;
+  try{
+    await navigator.clipboard.writeText(txt);
+    backupMsg('✓ הועתק! הדביקו בפתקים ושמרו.',true);
+  }catch(e){
+    // fallback: select the textarea for manual copy
+    const ta=document.getElementById('backup-text');ta.focus();ta.select();
+    try{document.execCommand('copy');backupMsg('✓ הועתק! הדביקו בפתקים ושמרו.',true);}
+    catch(e2){backupMsg('סמנו את הטקסט והעתיקו ידנית (לחיצה ארוכה).',false);}
+  }
+}
+async function shareBackup(){
+  const txt=JSON.stringify(db);
+  const stamp=new Date().toISOString().slice(0,10);
+  try{
+    if(navigator.share){
+      // try sharing as a file first, else as text
+      try{
+        const file=new File([txt],'גיבוי-הכסף-שלי-'+stamp+'.json',{type:'application/json'});
+        if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'גיבוי הכסף שלי'});backupMsg('✓ שותף בהצלחה.',true);return;}
+      }catch(e){}
+      await navigator.share({text:txt,title:'גיבוי הכסף שלי'});
+      backupMsg('✓ שותף בהצלחה.',true);return;
+    }
+  }catch(e){if(e&&e.name==='AbortError'){backupMsg('השיתוף בוטל.',false);return;}}
+  // last resort: attempt download
+  exportBackup();backupMsg('אם לא ירד קובץ — השתמשו בהעתקה.',false);
+}
+async function restoreFromText(){
+  const txt=document.getElementById('backup-text').value.trim();
+  if(!txt){backupMsg('הדביקו כאן את טקסט הגיבוי קודם.',false);return;}
+  try{
+    const data=JSON.parse(txt);
+    if(!data||typeof data!=='object'||!('investments' in data||'transactions' in data))throw new Error('bad');
+    db=data;
+    db.investments=db.investments||[];db.transactions=db.transactions||[];db.projects=db.projects||[];
+    db.snapshots=db.snapshots||{};db.recurring=db.recurring||[];db.budgets=db.budgets||{};
+    db.goal=db.goal||{label:'',target:0};db.events=db.events||[];
+    if(db.activeMonth===undefined)db.activeMonth=null;
+    if(!db.osh)db.osh={base:0,month:realKey()};
+    CURKEY=db.activeMonth||realKey();selMonth=CURKEY;
+    recordSnapshot();postRecurring();
+    await saveNow();render();
+    backupMsg('✓ הגיבוי שוחזר בהצלחה!',true);
+  }catch(e){backupMsg('⚠️ הטקסט אינו גיבוי תקין. ודאו שהעתקתם את כולו.',false);}
+}
+function importBackup(file){
+  if(!file)return;
+  let proceed=true;
+  try{proceed=confirm('שחזור יחליף את כל הנתונים הנוכחיים בנתונים מהגיבוי. להמשיך?');}catch(e){}
+  if(!proceed){document.getElementById('import-file').value='';return;}
+  const reader=new FileReader();
+  reader.onload=async()=>{
+    try{
+      const data=JSON.parse(reader.result);
+      if(!data||typeof data!=='object'||!('investments' in data||'transactions' in data))throw new Error('bad');
+      db=data;
+      db.investments=db.investments||[];db.transactions=db.transactions||[];db.projects=db.projects||[];
+      db.snapshots=db.snapshots||{};db.recurring=db.recurring||[];db.budgets=db.budgets||{};
+      db.goal=db.goal||{label:'',target:0};if(db.activeMonth===undefined)db.activeMonth=null;
+      db.events=db.events||[];
+      if(!db.osh)db.osh={base:0,month:realKey()};
+      CURKEY=db.activeMonth||realKey();selMonth=CURKEY;
+      recordSnapshot();postRecurring();
+      await saveNow();render();
+      alert('✓ הגיבוי שוחזר בהצלחה');
+    }catch(e){ alert('⚠️ קובץ הגיבוי אינו תקין'); }
+    document.getElementById('import-file').value='';
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- transactions ---------- */
+let draft={kind:'expense',category:'general'};
+let editingTxn=null;
+function openTxn(pref){
+  editingTxn=null;
+  draft={kind:'expense',category:'general',...(pref||{})};
+  document.getElementById('txn-title').textContent='תנועה חדשה';
+  setKind(draft.kind);
+  document.getElementById('txn-amt').value=pref&&pref.amount?pref.amount:'';
+  document.getElementById('txn-note').value=pref&&pref.note?pref.note:'';
+  renderCatButtons();
+  openSheet('sheet-txn');
+}
+function editTxn(id){
+  const t=db.transactions.find(x=>x.id===id);if(!t)return;
+  editingTxn=id;
+  draft={kind:t.kind,category:t.category};
+  document.getElementById('txn-title').textContent='עריכת תנועה';
+  setKind(t.kind);
+  document.getElementById('txn-amt').value=t.amount;
+  document.getElementById('txn-note').value=t.note||'';
+  renderCatButtons();
+  openSheet('sheet-txn');
+}
+function setKind(k){
+  draft.kind=k;
+  document.getElementById('seg-exp').classList.toggle('on',k==='expense');
+  document.getElementById('seg-inc').classList.toggle('on',k==='income');
+  document.getElementById('txn-catwrap').style.display=k==='expense'?'block':'none';
+}
+function renderCatButtons(){
+  document.getElementById('txn-cats').innerHTML=CATS.map(c=>
+    `<button class="${c.id===draft.category?'on':''}" onclick="pickCat('${c.id}')">${c.emoji} ${c.label}</button>`).join('');
+}
+function pickCat(id){draft.category=id;renderCatButtons();}
+async function saveTxn(){
+  const amt=parseNum(document.getElementById('txn-amt').value);
+  if(!amt||amt<=0){document.getElementById('txn-amt').focus();return;}
+  const cat=draft.kind==='expense'?draft.category:'income';
+  const note=document.getElementById('txn-note').value.trim();
+  if(editingTxn){
+    const t=db.transactions.find(x=>x.id===editingTxn);
+    if(t){t.kind=draft.kind;t.category=cat;t.amount=amt;t.note=note;}
+    editingTxn=null;
+  }else{
+    // land the entry in the month currently being viewed
+    const date=(selMonth===realKey())?Date.now():firstOfMonth(selMonth);
+    db.transactions.push({id:uid(),kind:draft.kind,category:cat,amount:amt,note,date});
+  }
+  await save();closeSheet();render();
+}
+async function delTxn(id){
+  const t=db.transactions.find(x=>x.id===id);
+  if(t&&t.recurringId){
+    const r=db.recurring.find(r=>r.id===t.recurringId);
+    if(r){r.skip=r.skip||[];if(t.recurringMonth&&!r.skip.includes(t.recurringMonth))r.skip.push(t.recurringMonth);}
+  }
+  // clear stale links so paid projects / transferred events stay consistent
+  db.projects.forEach(p=>{if(p.linkedTxn===id){p.linkedTxn=null;if(p.status==='paid')p.status='invoiced';}});
+  (db.events||[]).forEach(ev=>{if(ev.linkedTxn===id){ev.linkedTxn=null;ev.transferred=false;}});
+  db.transactions=db.transactions.filter(t=>t.id!==id);await save();render();
+}
+
+/* ---------- projects ---------- */
+let editingProj=null;
+function openProj(){
+  editingProj=null;
+  ['pr-name','pr-client','pr-amt'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('pr-status').value='pending';
+  document.getElementById('proj-title').textContent='פרויקט חדש';
+  openSheet('sheet-proj');
+}
+function editProj(id){
+  const p=db.projects.find(x=>x.id===id);if(!p)return;
+  editingProj=id;
+  document.getElementById('pr-name').value=p.name;
+  document.getElementById('pr-client').value=p.client||'';
+  document.getElementById('pr-amt').value=p.amount||'';
+  document.getElementById('pr-status').value=p.status;
+  document.getElementById('proj-title').textContent='עריכת פרויקט';
+  openSheet('sheet-proj');
+}
+async function saveProj(){
+  const name=document.getElementById('pr-name').value.trim();
+  const amt=parseNum(document.getElementById('pr-amt').value);
+  if(!name){document.getElementById('pr-name').focus();return;}
+  const client=document.getElementById('pr-client').value.trim();
+  const status=document.getElementById('pr-status').value;
+  if(editingProj){
+    const p=db.projects.find(x=>x.id===editingProj);
+    if(p){p.name=name;p.client=client;p.amount=amt;p.status=status;syncProjectIncome(p);}
+    editingProj=null;
+  }else{
+    const p={id:uid(),name,client,amount:amt,status,date:Date.now(),linkedTxn:null};
+    db.projects.push(p);syncProjectIncome(p);
+  }
+  await save();closeSheet();render();
+}
+async function cycleStatus(id){
+  const p=db.projects.find(x=>x.id===id);if(!p)return;
+  const order=['pending','invoiced','paid'];
+  p.status=order[(order.indexOf(p.status)+1)%3];
+  syncProjectIncome(p);await save();render();
+}
+function syncProjectIncome(p){
+  // paid -> ensure a matching income transaction exists and is up to date; otherwise remove it
+  if(p.status==='paid'){
+    let t=p.linkedTxn?db.transactions.find(x=>x.id===p.linkedTxn):null;
+    if(t){t.amount=+p.amount||0;t.note='תשלום: '+p.name;}
+    else{t={id:uid(),kind:'income',category:'income',amount:+p.amount||0,note:'תשלום: '+p.name,date:Date.now()};
+      db.transactions.push(t);p.linkedTxn=t.id;}
+  }else if(p.linkedTxn){
+    db.transactions=db.transactions.filter(t=>t.id!==p.linkedTxn);p.linkedTxn=null;
+  }
+}
+async function delProj(id){
+  const p=db.projects.find(x=>x.id===id);
+  if(p&&p.linkedTxn)db.transactions=db.transactions.filter(t=>t.id!==p.linkedTxn);
+  db.projects=db.projects.filter(x=>x.id!==id);await save();render();
+}
+
+/* ---------- sheets ---------- */
+function openSheet(id){document.getElementById('scrim').classList.add('show');document.getElementById(id).classList.add('show');}
+function closeSheet(){document.getElementById('scrim').classList.remove('show');
+  document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('show'));}
+
+/* ---------- Hebrew parsing ---------- */
+const HE_NUM={'אפס':0,'אחת':1,'אחד':1,'שתיים':2,'שניים':2,'שני':2,'שתי':2,'שלוש':3,'שלושה':3,'ארבע':4,'ארבעה':4,
+  'חמש':5,'חמישה':5,'שש':6,'שישה':6,'שבע':7,'שבעה':7,'שמונה':8,'תשע':9,'תשעה':9,'עשר':10,'עשרה':10,
+  'עשרים':20,'שלושים':30,'ארבעים':40,'חמישים':50,'שישים':60,'שבעים':70,'שמונים':80,'תשעים':90,'מאה':100,'מאתיים':200};
+function parseAmount(text){
+  const digit=text.replace(/,/g,'').match(/\d+(?:\.\d+)?/);
+  let base=digit?parseFloat(digit[0]):null;
+  // words
+  if(base===null){
+    let sum=0,prev=0,found=false;
+    text.split(/\s+/).forEach(w=>{
+      const clean=w.replace(/[^\u0590-\u05FF]/g,'');
+      if(clean==='\u05DE\u05D0\u05D5\u05EA'&&prev){sum+=prev*100-prev;prev=0;}       // "\u05E9\u05DC\u05D5\u05E9 \u05DE\u05D0\u05D5\u05EA" -> 300
+      else if(clean in HE_NUM){prev=HE_NUM[clean];sum+=prev;found=true;}
+      else prev=0;
+    });
+    if(found)base=sum;
+  }
+  if(base===null)return null;
+  if(/אלף|אלפים/.test(text))base*=1000;
+  return base;
+}
+function parseTransaction(text){
+  const t=text.trim();if(!t)return null;
+  const income=/(קיבלתי|הכנסה|שולם לי|נכנס|הרווחתי|קיבלנו|החזר)/.test(t);
+  let category='general';
+  for(const c of CATS){if(c.kw.some(k=>t.includes(k))){category=c.id;break;}}
+  const amount=parseAmount(t);
+  return {kind:income?'income':'expense',category,amount:amount||'',note:t};
+}
+function parseInvestment(text){
+  const t=text.trim();const amount=parseAmount(t);
+  let target=null;
+  // match by a holding's custom name first
+  for(const inv of db.investments){if(inv.name&&t.includes(inv.name)){target=inv.id;break;}}
+  // else match by kind keywords (specific terms like "קרן השתלמות" win)
+  if(!target){
+    for(const k of Object.keys(KINDS)){
+      if(kindInfo(k).kw.some(w=>t.includes(w))){
+        const inv=db.investments.find(i=>i.kind===k);
+        if(inv){target=inv.id;break;}
+      }
+    }
+  }
+  return {targetId:target,amount};
+}
+
+/* ---------- speech (Web Speech API + keyboard dictation fallback) ---------- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+function startMic(inputEl,micEl,onResult){
+  const val=()=>inputEl.value.trim();
+  if(!SR){ inputEl.focus(); return; } // rely on keyboard dictation mic
+  try{
+    const rec=new SR();rec.lang='he-IL';rec.interimResults=true;rec.maxAlternatives=1;
+    micEl.classList.add('live');
+    let finalText='';
+    rec.onresult=e=>{let s='';for(let i=0;i<e.results.length;i++)s+=e.results[i][0].transcript;
+      inputEl.value=s;if(e.results[e.results.length-1].isFinal)finalText=s;};
+    rec.onerror=()=>{micEl.classList.remove('live');};
+    rec.onend=()=>{micEl.classList.remove('live');if(val())onResult(val());};
+    rec.start();
+  }catch(err){inputEl.focus();}
+}
+// main capture
+document.getElementById('cap-mic').addEventListener('click',()=>{
+  startMic(document.getElementById('cap-in'),document.getElementById('cap-mic'),handleCapture);
+});
+document.getElementById('cap-go').addEventListener('click',()=>handleCapture(document.getElementById('cap-in').value));
+document.getElementById('cap-in').addEventListener('keydown',e=>{if(e.key==='Enter')handleCapture(e.target.value);});
+function handleCapture(text){
+  const p=parseTransaction(text);if(!p)return;
+  document.getElementById('cap-in').value='';
+  openTxn(p);
+}
+// investment capture
+document.getElementById('inv-mic').addEventListener('click',()=>{
+  startMic(document.getElementById('inv-cap'),document.getElementById('inv-mic'),handleInvCapture);
+});
+document.getElementById('inv-go').addEventListener('click',()=>handleInvCapture(document.getElementById('inv-cap').value));
+document.getElementById('inv-cap').addEventListener('keydown',e=>{if(e.key==='Enter')handleInvCapture(e.target.value);});
+async function handleInvCapture(text){
+  const p=parseInvestment(text);
+  if(p.targetId&&p.amount!=null){
+    const inv=db.investments.find(i=>i.id===p.targetId);
+    if(inv){inv.value=p.amount;inv.updatedAt=Date.now();recordSnapshot();await save();
+      document.getElementById('inv-cap').value='';render();return;}
+  }
+  // couldn't match a channel — keep the text and hint the user
+  const cap=document.getElementById('inv-cap');
+  cap.value='';cap.placeholder='לא זוהה אפיק. נסו: "פנסיה 200 אלף"';
+  render();
+}
+
+/* ---------- save on exit / background (safety net) ---------- */
+function flushAll(){flushInvInputs();saveNow();}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)flushAll();});
+window.addEventListener('pagehide',flushAll);
+window.addEventListener('blur',flushAll);
+
+/* ---------- boot ---------- */
+(async()=>{await load();render();
+  if(memoryOnly){document.getElementById('cap-hint').textContent='⚠️ לא ניתן לשמור בסביבה זו — הנתונים לא יישמרו לאחר סגירה.';showSaveState('error');}
+})();
+</script>
+</body>
+</html>
