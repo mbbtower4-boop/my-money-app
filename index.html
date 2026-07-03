@@ -505,6 +505,8 @@
 </div>
 
 <script>
+/* ---------- version (keep in sync with package.json + CHANGELOG.md) ---------- */
+const APP_VERSION='1.0.3';
 /* ---------- storage ---------- */
 const KEY='mln-finance-v1';
 let db={investments:[],transactions:[],projects:[]};
@@ -882,7 +884,8 @@ function exportPanel(){
   return `<div class="panel"><h3>גיבוי ונתונים</h3>
     <p style="color:var(--ink-soft);font-size:13px;margin-bottom:12px">גיבוי בהעתקת טקסט — עובד בכל מכשיר. שמרו את הטקסט בפתקים או שלחו לעצמכם, ולשחזור הדביקו אותו בחזרה.</p>
     <button class="save" onclick="openBackup()">🔐 גיבוי ושחזור</button>
-    <button class="save" style="background:none;color:var(--ink-soft);margin-top:8px" onclick="exportCSV()">ייצוא לאקסל (CSV)</button></div>`;
+    <button class="save" style="background:none;color:var(--ink-soft);margin-top:8px" onclick="exportCSV()">ייצוא לאקסל (CSV)</button>
+    <div class="hint" style="text-align:center;margin-top:10px">הכסף שלי · גרסה ${APP_VERSION}</div></div>`;
 }
 function renderStats(){
   const body=document.getElementById('stats-body');
