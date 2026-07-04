@@ -132,6 +132,7 @@
     background:var(--line-soft);color:var(--ink-soft);font-size:16px;cursor:grab;touch-action:none;
     user-select:none;-webkit-user-select:none}
   [data-dragrow]{will-change:transform}
+  [data-dragrow].shifting{transition:transform .18s ease}
   [data-dragrow].dragging{opacity:.92;box-shadow:0 6px 18px rgba(20,48,56,.25);position:relative;z-index:5;cursor:grabbing}
   .catrow .cn{font-size:14px;font-weight:600}
   .catrow .cbud{font-size:11px;color:var(--ink-soft);margin-top:1px}
@@ -516,7 +517,7 @@
 
 <script>
 /* ---------- version (keep in sync with package.json + CHANGELOG.md) ---------- */
-const APP_VERSION='1.0.7';
+const APP_VERSION='1.0.8';
 /* ---------- storage ---------- */
 const KEY='mln-finance-v1';
 let db={investments:[],transactions:[],projects:[]};
@@ -661,61 +662,85 @@ function orderedCats(){
   return ids.map(catById);
 }
 /* drag-to-reorder for vertical lists (pointer events, mobile friendly).
-   The dragged row follows the finger via transform; displaced rows animate
-   with a FLIP transition; the drop persists without a full re-render. */
+   Positions are measured ONCE at drag start; the dragged row follows the
+   finger via transform, clamped to the list bounds; other rows shift with
+   an animated transform only (no DOM moves mid-drag). The single DOM
+   reorder happens on release. */
 let dragCtx=null;
-function flipShift(el,fromDy){
-  el.style.transition='none';el.style.transform=`translateY(${fromDy}px)`;
-  requestAnimationFrame(()=>{
-    el.style.transition='transform .16s ease';el.style.transform='';
-    setTimeout(()=>{el.style.transition='';},190);
-  });
-}
 function listDragStart(e){
   const row=e.currentTarget.closest('[data-dragrow]');if(!row)return;
   e.preventDefault();
-  dragCtx={row,container:row.parentElement,startY:e.clientY};
+  const container=row.parentElement;
+  const rows=[...container.querySelectorAll('[data-dragrow]')];
+  const rects=rows.map(r=>r.getBoundingClientRect());
+  const idx=rows.indexOf(row);
+  dragCtx={
+    row,container,rows,idx,newIdx:idx,startY:e.clientY,
+    tops:rects.map(r=>r.top),heights:rects.map(r=>r.height),
+    H:rects[idx].height,
+    gap:rects.length>1?Math.max(0,rects[1].top-rects[0].bottom):0
+  };
   row.classList.add('dragging');row.style.transition='none';
+  rows.forEach(r=>{if(r!==row)r.classList.add('shifting');});
   try{e.currentTarget.setPointerCapture(e.pointerId);}catch(_){}
 }
 function listDragMove(e){
   if(!dragCtx)return;e.preventDefault();
-  const c=dragCtx,row=c.row;
-  row.style.transform=`translateY(${e.clientY-c.startY}px)`;
-  const prev=row.previousElementSibling,next=row.nextElementSibling;
-  if(prev&&prev.hasAttribute('data-dragrow')){
-    const pb=prev.getBoundingClientRect();
-    if(e.clientY<pb.top+pb.height/2){
-      c.container.insertBefore(row,prev);
-      c.startY-=pb.height;                       // keep the row glued to the finger
-      row.style.transform=`translateY(${e.clientY-c.startY}px)`;
-      flipShift(prev,-row.offsetHeight);         // prev slides down into place
-      return;
-    }
-  }
-  if(next&&next.hasAttribute('data-dragrow')){
-    const nb=next.getBoundingClientRect();
-    if(e.clientY>nb.top+nb.height/2){
-      c.container.insertBefore(row,next.nextElementSibling);
-      c.startY+=nb.height;
-      row.style.transform=`translateY(${e.clientY-c.startY}px)`;
-      flipShift(next,row.offsetHeight);          // next slides up into place
-    }
+  const c=dragCtx,last=c.tops.length-1;
+  // clamp: the row can never leave the list bounds
+  const minDy=c.tops[0]-c.tops[c.idx];
+  const maxDy=(c.tops[last]+c.heights[last])-(c.tops[c.idx]+c.H);
+  const dy=Math.max(minDy,Math.min(e.clientY-c.startY,maxDy));
+  c.row.style.transform=`translateY(${dy}px)`;
+  // target slot from the dragged row's center vs. original midpoints
+  const center=c.tops[c.idx]+c.H/2+dy;
+  let ni=c.idx;
+  c.rows.forEach((r,j)=>{
+    if(j===c.idx)return;
+    const mid=c.tops[j]+c.heights[j]/2;
+    if(j>c.idx&&center>=mid)ni=Math.max(ni,j);
+    if(j<c.idx&&center<=mid)ni=Math.min(ni,j);
+  });
+  if(ni!==c.newIdx){
+    c.newIdx=ni;
+    const shift=c.H+c.gap;
+    c.rows.forEach((r,j)=>{
+      if(j===c.idx)return;
+      if(j>c.idx&&j<=ni)r.style.transform=`translateY(${-shift}px)`;
+      else if(j<c.idx&&j>=ni)r.style.transform=`translateY(${shift}px)`;
+      else r.style.transform='';
+    });
   }
 }
 function listDragEnd(){
   if(!dragCtx)return;
   const c=dragCtx;dragCtx=null;
-  const row=c.row;
-  row.style.transition='transform .15s ease';row.style.transform='';
-  setTimeout(()=>{row.style.transition='';row.classList.remove('dragging');},170);
-  if(c.container.id==='cat-chips'){
-    db.catOrder=[...c.container.children].map(r=>r.dataset.cat);
-  }else if(c.container.id==='inv-list'){
-    const ids=[...c.container.children].map(r=>r.dataset.rowid);
-    db.investments.sort((a,b)=>ids.indexOf(a.id)-ids.indexOf(b.id));
+  // glide the dragged row into its slot, then settle the DOM in one step
+  const dyFinal=(c.newIdx-c.idx)*(c.H+c.gap);
+  c.row.style.transition='transform .13s ease';
+  c.row.style.transform=`translateY(${dyFinal}px)`;
+  setTimeout(()=>{
+    c.rows.forEach(r=>{r.style.transition='none';r.style.transform='';r.classList.remove('shifting');});
+    c.row.classList.remove('dragging');
+    if(c.newIdx!==c.idx){
+      const ref=c.rows[c.newIdx];
+      if(c.newIdx>c.idx)c.container.insertBefore(c.row,ref.nextElementSibling);
+      else c.container.insertBefore(c.row,ref);
+    }
+    requestAnimationFrame(()=>c.rows.forEach(r=>{r.style.transition='';}));
+  },140);
+  // persist the new order immediately
+  if(c.newIdx!==c.idx){
+    const order=c.rows.map(r=>r);
+    order.splice(c.idx,1);order.splice(c.newIdx,0,c.row);
+    if(c.container.id==='cat-chips'){
+      db.catOrder=order.map(r=>r.dataset.cat);
+    }else if(c.container.id==='inv-list'){
+      const ids=order.map(r=>r.dataset.rowid);
+      db.investments.sort((a,b)=>ids.indexOf(a.id)-ids.indexOf(b.id));
+    }
+    scheduleSave();
   }
-  scheduleSave();   // DOM already shows the new order — no re-render needed
 }
 
 /* ---------- nav ---------- */
