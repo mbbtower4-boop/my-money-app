@@ -128,9 +128,11 @@
   /* category summary — vertical, drag-to-reorder */
   .cats{display:flex;flex-direction:column;gap:1px;background:var(--line-soft);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:12px}
   .catrow{background:var(--card);display:flex;align-items:center;gap:10px;padding:11px 12px}
-  .catrow .drag{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border-radius:10px;
-    background:var(--line-soft);color:var(--ink-soft);font-size:16px;cursor:grab;touch-action:none;user-select:none}
-  .catrow.dragging{opacity:.85;box-shadow:0 6px 18px rgba(20,48,56,.25);position:relative;z-index:5}
+  .drag{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border-radius:10px;
+    background:var(--line-soft);color:var(--ink-soft);font-size:16px;cursor:grab;touch-action:none;
+    user-select:none;-webkit-user-select:none}
+  [data-dragrow]{will-change:transform}
+  [data-dragrow].dragging{opacity:.92;box-shadow:0 6px 18px rgba(20,48,56,.25);position:relative;z-index:5;cursor:grabbing}
   .catrow .cn{font-size:14px;font-weight:600}
   .catrow .cbud{font-size:11px;color:var(--ink-soft);margin-top:1px}
   .catrow .ctrack{height:5px;background:var(--line-soft);border-radius:4px;overflow:hidden;margin-top:5px}
@@ -514,7 +516,7 @@
 
 <script>
 /* ---------- version (keep in sync with package.json + CHANGELOG.md) ---------- */
-const APP_VERSION='1.0.6';
+const APP_VERSION='1.0.7';
 /* ---------- storage ---------- */
 const KEY='mln-finance-v1';
 let db={investments:[],transactions:[],projects:[]};
@@ -554,14 +556,16 @@ async function load(){
   }catch(e){ /* first run or unavailable */ }
   db.investments=db.investments||[];
   if(!db.investments.length){
-    db.investments=DEFAULT_KINDS.map(k=>({id:uid(),name:kindInfo(k).label,kind:k,value:0,updatedAt:Date.now()}));
+    db.investments=DEFAULT_KINDS.map(k=>({id:uid(),name:'',kind:k,value:0,updatedAt:Date.now()}));
   }else{
     // migrate: make sure the standard savings/investment channels exist
     DEFAULT_KINDS.forEach(k=>{
       if(!db.investments.some(i=>i.kind===k))
-        db.investments.push({id:uid(),name:kindInfo(k).label,kind:k,value:0,updatedAt:Date.now()});
+        db.investments.push({id:uid(),name:'',kind:k,value:0,updatedAt:Date.now()});
     });
   }
+  // migrate: a name identical to the kind label is not a custom name
+  db.investments.forEach(i=>{if(i.name===kindInfo(i.kind).label)i.name='';});
   db.transactions=db.transactions||[];
   db.projects=db.projects||[];
   db.snapshots=db.snapshots||{};   // month key -> total investment value that month
@@ -656,32 +660,62 @@ function orderedCats(){
   CATS.forEach(c=>{if(!ids.includes(c.id))ids.push(c.id);});
   return ids.map(catById);
 }
-/* drag-to-reorder for the category list (pointer events, mobile friendly) */
-let catDrag=null;
-function catDragStart(e){
-  const row=e.currentTarget.closest('.catrow');if(!row)return;
+/* drag-to-reorder for vertical lists (pointer events, mobile friendly).
+   The dragged row follows the finger via transform; displaced rows animate
+   with a FLIP transition; the drop persists without a full re-render. */
+let dragCtx=null;
+function flipShift(el,fromDy){
+  el.style.transition='none';el.style.transform=`translateY(${fromDy}px)`;
+  requestAnimationFrame(()=>{
+    el.style.transition='transform .16s ease';el.style.transform='';
+    setTimeout(()=>{el.style.transition='';},190);
+  });
+}
+function listDragStart(e){
+  const row=e.currentTarget.closest('[data-dragrow]');if(!row)return;
   e.preventDefault();
-  catDrag={row,container:row.parentElement};
-  row.classList.add('dragging');
+  dragCtx={row,container:row.parentElement,startY:e.clientY};
+  row.classList.add('dragging');row.style.transition='none';
   try{e.currentTarget.setPointerCapture(e.pointerId);}catch(_){}
 }
-function catDragMove(e){
-  if(!catDrag)return;e.preventDefault();
-  const {row,container}=catDrag,y=e.clientY;
-  const others=[...container.querySelectorAll('.catrow')].filter(r=>r!==row);
-  let placed=false;
-  for(const r of others){
-    const b=r.getBoundingClientRect();
-    if(y<b.top+b.height/2){if(r.previousElementSibling!==row)container.insertBefore(row,r);placed=true;break;}
+function listDragMove(e){
+  if(!dragCtx)return;e.preventDefault();
+  const c=dragCtx,row=c.row;
+  row.style.transform=`translateY(${e.clientY-c.startY}px)`;
+  const prev=row.previousElementSibling,next=row.nextElementSibling;
+  if(prev&&prev.hasAttribute('data-dragrow')){
+    const pb=prev.getBoundingClientRect();
+    if(e.clientY<pb.top+pb.height/2){
+      c.container.insertBefore(row,prev);
+      c.startY-=pb.height;                       // keep the row glued to the finger
+      row.style.transform=`translateY(${e.clientY-c.startY}px)`;
+      flipShift(prev,-row.offsetHeight);         // prev slides down into place
+      return;
+    }
   }
-  if(!placed&&container.lastElementChild!==row)container.appendChild(row);
+  if(next&&next.hasAttribute('data-dragrow')){
+    const nb=next.getBoundingClientRect();
+    if(e.clientY>nb.top+nb.height/2){
+      c.container.insertBefore(row,next.nextElementSibling);
+      c.startY+=nb.height;
+      row.style.transform=`translateY(${e.clientY-c.startY}px)`;
+      flipShift(next,row.offsetHeight);          // next slides up into place
+    }
+  }
 }
-async function catDragEnd(){
-  if(!catDrag)return;
-  const {row,container}=catDrag;
-  row.classList.remove('dragging');catDrag=null;
-  db.catOrder=[...container.querySelectorAll('.catrow')].map(r=>r.dataset.cat);
-  await save();render();
+function listDragEnd(){
+  if(!dragCtx)return;
+  const c=dragCtx;dragCtx=null;
+  const row=c.row;
+  row.style.transition='transform .15s ease';row.style.transform='';
+  setTimeout(()=>{row.style.transition='';row.classList.remove('dragging');},170);
+  if(c.container.id==='cat-chips'){
+    db.catOrder=[...c.container.children].map(r=>r.dataset.cat);
+  }else if(c.container.id==='inv-list'){
+    const ids=[...c.container.children].map(r=>r.dataset.rowid);
+    db.investments.sort((a,b)=>ids.indexOf(a.id)-ids.indexOf(b.id));
+  }
+  scheduleSave();   // DOM already shows the new order — no re-render needed
 }
 
 /* ---------- nav ---------- */
@@ -837,7 +871,8 @@ function renderInvest(){
   const el=document.getElementById('inv-list');
   el.innerHTML=db.investments.map(i=>{
     const info=kindInfo(i.kind);
-    return `<div class="inv-edit">
+    return `<div class="inv-edit" data-dragrow data-rowid="${i.id}">
+      <span class="drag" onpointerdown="listDragStart(event)" onpointermove="listDragMove(event)" onpointerup="listDragEnd()" onpointercancel="listDragEnd()" oncontextmenu="return false">☰</span>
       <div class="dot gold" onclick="editInv('${i.id}')">${info.emoji}</div>
       <div class="t" onclick="editInv('${i.id}')">${esc(i.name)||info.label}</div>
       <input type="text" inputmode="numeric" data-inv="${i.id}" value="${i.value?groupNum(i.value):''}" placeholder="0"
@@ -872,8 +907,8 @@ function renderFlow(){
       const pct=Math.min(100,spent/bud*100),over=spent>bud;
       extra=`<div class="cbud">מתוך ${groupNum(bud)}</div><div class="ctrack"><i class="${over?'over':''}" style="width:${pct}%"></i></div>`;
     }
-    return `<div class="catrow" data-cat="${c.id}">
-      <span class="drag" onpointerdown="catDragStart(event)" onpointermove="catDragMove(event)" onpointerup="catDragEnd()" onpointercancel="catDragEnd()" oncontextmenu="return false">☰</span>
+    return `<div class="catrow" data-dragrow data-cat="${c.id}">
+      <span class="drag" onpointerdown="listDragStart(event)" onpointermove="listDragMove(event)" onpointerup="listDragEnd()" onpointercancel="listDragEnd()" oncontextmenu="return false">☰</span>
       <div class="dot ex">${c.emoji}</div>
       <div class="mid"><div class="cn">${c.label}</div>${extra}</div>
       <div class="cv num">${ILS(spent)}</div>
@@ -1091,7 +1126,7 @@ function editInv(id){
 }
 async function saveInv(){
   const kind=document.getElementById('inv-kind').value;
-  const name=document.getElementById('inv-name').value.trim()||kindInfo(kind).label;
+  const name=document.getElementById('inv-name').value.trim(); // empty = show the kind label
   const value=parseNum(document.getElementById('inv-value').value);
   if(editingInv){
     const inv=db.investments.find(i=>i.id===editingInv);
