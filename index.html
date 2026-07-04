@@ -159,6 +159,8 @@
   nav button.on .ic{opacity:1;filter:none}
   nav button.on .lb{font-weight:900}
   .btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .navmove{width:40px;height:40px;flex:0 0 40px;border:none;background:var(--line-soft);border-radius:11px;font-size:14px;color:var(--ink);cursor:pointer;margin-right:6px}
+  .navmove:disabled{opacity:.3;cursor:default}
 
   /* sheet (modal) */
   .scrim{position:fixed;inset:0;background:rgba(20,48,56,.4);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
@@ -309,7 +311,7 @@
     <div class="stitle"><h2>תזרים</h2><div class="btns"><button class="add" onclick="go('events')">אירועים</button><button class="add" onclick="openBudget()">תקציב</button><button class="add" onclick="openTxn()">+ הוסף</button></div></div>
     <div class="mnav">
       <button class="marrow" id="mnav-older" onclick="stepMonth(-1)"><span class="chev">‹</span><span class="mlbl" id="older-lbl"></span></button>
-      <div class="mnav-mid" onclick="openMonthPicker()"><span id="mnav-label"></span><span class="mnav-net num" id="mnav-net"></span></div>
+      <div class="mnav-mid" onclick="openMonthPicker()"><span id="mnav-label"></span></div>
       <button class="marrow" id="mnav-newer" onclick="stepMonth(1)"><span class="mlbl" id="newer-lbl"></span><span class="chev">›</span></button>
     </div>
     <div class="osh" onclick="openOsh()">
@@ -360,14 +362,7 @@
   </section>
 </div>
 
-<nav>
-  <button data-v="overview" class="on" onclick="go('overview')"><span class="ic">🏠</span><span class="lb">סקירה</span></button>
-  <button data-v="invest" onclick="go('invest')"><span class="ic">📈</span><span class="lb">השקעות</span></button>
-  <button data-v="flow" onclick="go('flow')"><span class="ic">💳</span><span class="lb">תזרים</span></button>
-  <button data-v="fixed" onclick="go('fixed')"><span class="ic">🔁</span><span class="lb">קבועות</span></button>
-  <button data-v="proj" onclick="go('proj')"><span class="ic">🧾</span><span class="lb">פרויקטים</span></button>
-  <button data-v="stats" onclick="go('stats')"><span class="ic">📊</span><span class="lb">נתונים</span></button>
-</nav>
+<nav id="nav"></nav>
 
 <div class="scrim" id="scrim" onclick="closeSheet()"></div>
 <input type="file" id="import-file" accept="application/json,.json" style="display:none" onchange="importBackup(this.files[0])">
@@ -490,6 +485,15 @@
   <div class="hint" id="backup-msg" style="text-align:center;margin-top:8px"></div>
 </div>
 
+<!-- nav order sheet -->
+<div class="sheet" id="sheet-navorder">
+  <div class="grip"></div>
+  <h3>סדר הלשוניות</h3>
+  <div class="hint" style="margin:-4px 0 12px">שנו את סדר הכפתורים בתפריט התחתון בעזרת החיצים ▲▼.</div>
+  <div id="navorder-list"></div>
+  <button class="save" onclick="closeSheet()" style="margin-top:14px">סיום</button>
+</div>
+
 <!-- month picker sheet -->
 <div class="sheet" id="sheet-month">
   <div class="grip"></div>
@@ -506,7 +510,7 @@
 
 <script>
 /* ---------- version (keep in sync with package.json + CHANGELOG.md) ---------- */
-const APP_VERSION='1.0.3';
+const APP_VERSION='1.0.4';
 /* ---------- storage ---------- */
 const KEY='mln-finance-v1';
 let db={investments:[],transactions:[],projects:[]};
@@ -561,6 +565,7 @@ async function load(){
   db.budgets=db.budgets||{};       // category -> monthly target
   db.goal=db.goal||{label:'',target:0};
   db.events=db.events||[];         // single-event expense ledgers (e.g. a trip)
+  db.navOrder=db.navOrder||NAV_DEFAULT.slice();  // bottom-nav tab order
   if(db.activeMonth===undefined)db.activeMonth=null; // null = follow real date
   CURKEY=db.activeMonth||realKey();
   selMonth=CURKEY;
@@ -642,6 +647,24 @@ const catById=id=>CATS.find(c=>c.id===id)||CATS[CATS.length-1];
 
 /* ---------- nav ---------- */
 let cur='overview';
+const NAV_ITEMS={
+  overview:{ic:'🏠',lb:'סקירה'},
+  invest:{ic:'📈',lb:'השקעות'},
+  flow:{ic:'💳',lb:'תזרים'},
+  fixed:{ic:'🔁',lb:'קבועות'},
+  proj:{ic:'🧾',lb:'פרויקטים'},
+  stats:{ic:'📊',lb:'נתונים'}
+};
+const NAV_DEFAULT=['overview','invest','flow','fixed','proj','stats'];
+function navOrder(){
+  const order=((db.navOrder&&db.navOrder.length)?db.navOrder:NAV_DEFAULT).filter(k=>NAV_ITEMS[k]);
+  NAV_DEFAULT.forEach(k=>{if(!order.includes(k))order.push(k);});   // heal missing keys
+  return order;
+}
+function renderNav(){
+  document.getElementById('nav').innerHTML=navOrder().map(k=>
+    `<button data-v="${k}" class="${k===cur?'on':''}" onclick="go('${k}')"><span class="ic">${NAV_ITEMS[k].ic}</span><span class="lb">${NAV_ITEMS[k].lb}</span></button>`).join('');
+}
 function go(v){
   cur=v;
   document.querySelectorAll('.view').forEach(s=>s.classList.remove('on'));
@@ -649,6 +672,24 @@ function go(v){
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
   render();
   window.scrollTo(0,0);
+}
+/* ---------- tab reordering ---------- */
+function openNavOrder(){db.navOrder=navOrder();renderNavOrderList();openSheet('sheet-navorder');}
+function renderNavOrderList(){
+  const order=db.navOrder;
+  document.getElementById('navorder-list').innerHTML='<div class="list">'+order.map((k,i)=>`
+    <div class="item">
+      <div class="dot gold">${NAV_ITEMS[k].ic}</div>
+      <div class="mid"><div class="t">${NAV_ITEMS[k].lb}</div></div>
+      <button class="navmove" onclick="moveNav(${i},-1)" ${i===0?'disabled':''} aria-label="למעלה">▲</button>
+      <button class="navmove" onclick="moveNav(${i},1)" ${i===order.length-1?'disabled':''} aria-label="למטה">▼</button>
+    </div>`).join('')+'</div>';
+}
+async function moveNav(i,dir){
+  const order=db.navOrder,j=i+dir;
+  if(j<0||j>=order.length)return;
+  [order[i],order[j]]=[order[j],order[i]];
+  await save();renderNavOrderList();renderNav();
 }
 
 /* ---------- render ---------- */
@@ -767,9 +808,6 @@ function renderFlow(){
   // navigator
   const mt=monthTotals(selMonth);
   document.getElementById('mnav-label').textContent=monthLabel(selMonth)+(selMonth===CURKEY?' • הנוכחי':'');
-  const netEl=document.getElementById('mnav-net');
-  netEl.textContent=(mt.net>=0?'+':'−')+ILS(Math.abs(mt.net));
-  netEl.className='mnav-net num '+(mt.net>=0?'pos':'neg');
   document.getElementById('older-lbl').textContent=shortMonth(shiftKey(selMonth,-1));
   const canNewer=selMonth<maxBrowse();
   document.getElementById('mnav-newer').disabled=!canNewer;
@@ -887,15 +925,19 @@ function exportPanel(){
     <button class="save" style="background:none;color:var(--ink-soft);margin-top:8px" onclick="exportCSV()">ייצוא לאקסל (CSV)</button>
     <div class="hint" style="text-align:center;margin-top:10px">הכסף שלי · גרסה ${APP_VERSION}</div></div>`;
 }
+function settingsPanel(){
+  return `<div class="panel"><h3>הגדרות</h3>
+    <button class="save" style="background:none;color:var(--ink);border:1px solid var(--line)" onclick="openNavOrder()">↕️ סדר הלשוניות בתפריט</button></div>`;
+}
 function renderStats(){
   const body=document.getElementById('stats-body');
-  const goalHtml=renderGoal(),exportHtml=exportPanel();
+  const goalHtml=renderGoal(),exportHtml=exportPanel(),settingsHtml=settingsPanel();
   if(!db.transactions.length && investTotalNow()===0){
-    body.innerHTML=goalHtml+`<div class="empty"><div class="e-emoji">📊</div><p>עדיין אין מספיק נתונים. הוסיפו תנועות או עדכנו את ההשקעות והסטטיסטיקה תופיע כאן.</p></div>`;return;
+    body.innerHTML=goalHtml+`<div class="empty"><div class="e-emoji">📊</div><p>עדיין אין מספיק נתונים. הוסיפו תנועות או עדכנו את ההשקעות והסטטיסטיקה תופיע כאן.</p></div>`+settingsHtml;return;
   }
   const nwHtml=renderNetWorth();
   if(!db.transactions.length){
-    body.innerHTML=goalHtml+nwHtml+exportHtml;return;
+    body.innerHTML=goalHtml+nwHtml+exportHtml+settingsHtml;return;
   }
   // last 6 months keys (oldest -> newest)
   const keys=[];for(let i=5;i>=0;i--)keys.push(shiftKey(CURKEY,-i));
@@ -948,7 +990,7 @@ function renderStats(){
         </div>`).join(''):'<p style="color:var(--ink-soft);font-size:13px">אין הוצאות בחודש זה.</p>'}
     </div>`;
 
-  body.innerHTML=goalHtml+nwHtml+chart+kpis+breakdown+exportHtml;
+  body.innerHTML=goalHtml+nwHtml+chart+kpis+breakdown+exportHtml+settingsHtml;
 }
 
 /* ---------- investments ---------- */
@@ -1323,11 +1365,12 @@ async function restoreFromText(){
     db.investments=db.investments||[];db.transactions=db.transactions||[];db.projects=db.projects||[];
     db.snapshots=db.snapshots||{};db.recurring=db.recurring||[];db.budgets=db.budgets||{};
     db.goal=db.goal||{label:'',target:0};db.events=db.events||[];
+    db.navOrder=db.navOrder||NAV_DEFAULT.slice();
     if(db.activeMonth===undefined)db.activeMonth=null;
     if(!db.osh)db.osh={base:0,month:realKey()};
     CURKEY=db.activeMonth||realKey();selMonth=CURKEY;
     recordSnapshot();postRecurring();
-    await saveNow();render();
+    await saveNow();renderNav();render();
     backupMsg('✓ הגיבוי שוחזר בהצלחה!',true);
   }catch(e){backupMsg('⚠️ הטקסט אינו גיבוי תקין. ודאו שהעתקתם את כולו.',false);}
 }
@@ -1346,10 +1389,11 @@ function importBackup(file){
       db.snapshots=db.snapshots||{};db.recurring=db.recurring||[];db.budgets=db.budgets||{};
       db.goal=db.goal||{label:'',target:0};if(db.activeMonth===undefined)db.activeMonth=null;
       db.events=db.events||[];
+      db.navOrder=db.navOrder||NAV_DEFAULT.slice();
       if(!db.osh)db.osh={base:0,month:realKey()};
       CURKEY=db.activeMonth||realKey();selMonth=CURKEY;
       recordSnapshot();postRecurring();
-      await saveNow();render();
+      await saveNow();renderNav();render();
       alert('✓ הגיבוי שוחזר בהצלחה');
     }catch(e){ alert('⚠️ קובץ הגיבוי אינו תקין'); }
     document.getElementById('import-file').value='';
@@ -1583,7 +1627,7 @@ window.addEventListener('pagehide',flushAll);
 window.addEventListener('blur',flushAll);
 
 /* ---------- boot ---------- */
-(async()=>{await load();render();
+(async()=>{await load();renderNav();render();
   if(memoryOnly){document.getElementById('cap-hint').textContent='⚠️ לא ניתן לשמור בסביבה זו — הנתונים לא יישמרו לאחר סגירה.';showSaveState('error');}
 })();
 </script>
