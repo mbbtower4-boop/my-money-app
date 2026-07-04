@@ -1,6 +1,6 @@
 {
   "name": "my-money-app",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "private": true,
   "description": "הכסף שלי — אפליקציית מעקב כספים אישית (קובץ HTML יחיד)"
 }

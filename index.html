@@ -127,7 +127,21 @@
 
   /* category summary — vertical, drag-to-reorder */
   .cats{display:flex;flex-direction:column;gap:1px;background:var(--line-soft);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:12px}
-  .catrow{background:var(--card);display:flex;align-items:center;gap:10px;padding:11px 12px}
+  .catrow{background:var(--card)}
+  .crhead{display:flex;align-items:center;gap:10px;padding:11px 12px}
+  .crhead .mid,.crhead .cv,.crhead .dot{cursor:pointer}
+  .ctog{width:28px;height:28px;flex:0 0 28px;display:grid;place-items:center;border-radius:9px;
+    background:var(--line-soft);color:var(--ink-soft);font-size:16px;font-weight:800;cursor:pointer;user-select:none}
+  .ctog.off{background:none;cursor:default}
+  .ccount{font-size:11px;color:var(--ink-soft);font-weight:600}
+  .crdetail{border-top:1px solid var(--line-soft);padding:2px 12px 6px 12px}
+  .crtxn{display:flex;align-items:center;gap:10px;padding:9px 2px}
+  .crtxn+.crtxn{border-top:1px solid var(--line-soft)}
+  .crtxn .t{font-size:14px;font-weight:600}
+  .crtxn .s{font-size:11.5px;color:var(--ink-soft);margin-top:1px}
+  .crtxn .mid{flex:1;min-width:0;cursor:pointer}
+  .crtxn .amt{font-size:14px;cursor:pointer}
+  .crtxn .del{border:none;background:none;color:#C3CCCB;font-size:16px;padding:4px;cursor:pointer;line-height:1}
   .drag{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border-radius:10px;
     background:var(--line-soft);color:var(--ink-soft);font-size:16px;cursor:grab;touch-action:none;
     user-select:none;-webkit-user-select:none}
@@ -517,7 +531,7 @@
 
 <script>
 /* ---------- version (keep in sync with package.json + CHANGELOG.md) ---------- */
-const APP_VERSION='1.0.9';
+const APP_VERSION='1.0.10';
 /* ---------- storage ---------- */
 const KEY='mln-finance-v1';
 let db={investments:[],transactions:[],projects:[]};
@@ -923,37 +937,57 @@ function renderFlow(){
   document.getElementById('osh-ex').textContent=ILS(mt.exp);
 
   const chips=document.getElementById('cat-chips');
-  const sums={};CATS.forEach(c=>sums[c.id]=0);
-  db.transactions.forEach(t=>{if(t.kind==='expense'&&inMonth(t.date,selMonth))sums[t.category]=(sums[t.category]||0)+t.amount;});
+  const monthTx=db.transactions.filter(t=>inMonth(t.date,selMonth));
+  const byCat={};CATS.forEach(c=>byCat[c.id]=[]);
+  monthTx.filter(t=>t.kind==='expense').forEach(t=>byCat[catById(t.category).id].push(t));
+  const txnRow=t=>{
+    const isInc=t.kind==='income';
+    const mark=t.recurringId?' 🔁':(t.eventId?' 🧳':'');
+    return `<div class="crtxn">
+      <div class="mid" onclick="editTxn('${t.id}')"><div class="t">${esc(t.note)||(isInc?'הכנסה':catById(t.category).label)}${mark}</div>
+      <div class="s">${new Date(t.date).toLocaleDateString('he-IL',{day:'numeric',month:'short'})}</div></div>
+      <div class="amt ${isInc?'in':'ex'} num" onclick="editTxn('${t.id}')">${ILS(t.amount)}</div>
+      <button class="del" onclick="delTxn('${t.id}')">✕</button>
+    </div>`;};
   chips.innerHTML=orderedCats().map(c=>{
-    const spent=sums[c.id],bud=+(db.budgets[c.id]||0);
+    const txs=byCat[c.id].sort((a,b)=>b.date-a.date);
+    const spent=txs.reduce((s,t)=>s+t.amount,0),bud=+(db.budgets[c.id]||0);
     let extra='';
     if(bud>0){
       const pct=Math.min(100,spent/bud*100),over=spent>bud;
       extra=`<div class="cbud">מתוך ${groupNum(bud)}</div><div class="ctrack"><i class="${over?'over':''}" style="width:${pct}%"></i></div>`;
     }
+    const open=openCats.has(c.id)&&txs.length;
     return `<div class="catrow" data-dragrow data-cat="${c.id}">
-      <span class="drag" onpointerdown="listDragStart(event)" onpointermove="listDragMove(event)" onpointerup="listDragEnd()" onpointercancel="listDragEnd()" oncontextmenu="return false">☰</span>
-      <div class="dot ex">${c.emoji}</div>
-      <div class="mid"><div class="cn">${c.label}</div>${extra}</div>
-      <div class="cv num">${ILS(spent)}</div>
+      <div class="crhead">
+        <span class="drag" onpointerdown="listDragStart(event)" onpointermove="listDragMove(event)" onpointerup="listDragEnd()" onpointercancel="listDragEnd()" oncontextmenu="return false">☰</span>
+        <div class="dot ex" onclick="toggleCat('${c.id}')">${c.emoji}</div>
+        <div class="mid" onclick="toggleCat('${c.id}')"><div class="cn">${c.label}${txs.length?` <span class="ccount">(${txs.length})</span>`:''}</div>${extra}</div>
+        <div class="cv num" onclick="toggleCat('${c.id}')">${ILS(spent)}</div>
+        ${txs.length?`<span class="ctog" onclick="toggleCat('${c.id}')">${open?'−':'+'}</span>`:'<span class="ctog off"></span>'}
+      </div>
+      ${open?`<div class="crdetail">${txs.map(txnRow).join('')}</div>`:''}
     </div>`;
   }).join('');
 
   const list=document.getElementById('flow-list');
-  const txns=db.transactions.filter(t=>inMonth(t.date,selMonth)).sort((a,b)=>b.date-a.date);
-  if(!txns.length){list.innerHTML=`<div class="empty"><div class="e-emoji">🧾</div><p>אין תנועות בחודש זה. הוסיפו הוצאה או הכנסה בקול מהמסך הראשי.</p></div>`;return;}
-  list.innerHTML='<div class="list">'+txns.map(t=>{
-    const isInc=t.kind==='income';const c=catById(t.category);
-    const rec=t.recurringId?' 🔁':(t.eventId?' 🧳':'');
-    return `<div class="item">
-      <div class="dot ${isInc?'in':'ex'}" onclick="editTxn('${t.id}')">${isInc?'⬆️':c.emoji}</div>
-      <div class="mid" onclick="editTxn('${t.id}')"><div class="t">${esc(t.note)||(isInc?'הכנסה':c.label)}${rec}</div>
-      <div class="s">${isInc?'הכנסה':c.label} · ${new Date(t.date).toLocaleDateString('he-IL',{day:'numeric',month:'short'})}</div></div>
-      <div class="amt ${isInc?'in':'ex'} num" onclick="editTxn('${t.id}')">${isInc?'+':'−'}${ILS(t.amount)}</div>
-      <button class="del" onclick="delTxn('${t.id}')">✕</button>
-    </div>`;}).join('')+'</div>';
+  const incomes=monthTx.filter(t=>t.kind==='income').sort((a,b)=>b.date-a.date);
+  if(!monthTx.length){list.innerHTML=`<div class="empty"><div class="e-emoji">🧾</div><p>אין תנועות בחודש זה. הוסיפו הוצאה או הכנסה בקול מהמסך הראשי.</p></div>`;return;}
+  if(!incomes.length){list.innerHTML='';return;}
+  const incOpen=openCats.has('income');
+  list.innerHTML=`<div class="cats"><div class="catrow">
+    <div class="crhead">
+      <div class="dot in" onclick="toggleCat('income')">⬆️</div>
+      <div class="mid" onclick="toggleCat('income')"><div class="cn">הכנסות <span class="ccount">(${incomes.length})</span></div></div>
+      <div class="cv num in" onclick="toggleCat('income')" style="color:var(--income)">${ILS(incomes.reduce((s,t)=>s+t.amount,0))}</div>
+      <span class="ctog" onclick="toggleCat('income')">${incOpen?'−':'+'}</span>
+    </div>
+    ${incOpen?`<div class="crdetail">${incomes.map(txnRow).join('')}</div>`:''}
+  </div></div>`;
 }
+/* expanded/collapsed category groups in the flow view (session state) */
+const openCats=new Set();
+function toggleCat(id){openCats.has(id)?openCats.delete(id):openCats.add(id);renderFlow();}
 function renderProj(){
   const list=document.getElementById('proj-list');
   if(!db.projects.length){list.innerHTML=`<div class="empty"><div class="e-emoji">🧩</div><p>אין פרויקטים עדיין. הוסיפו פרויקט כדי לא לשכוח לחייב לקוחות.</p></div>`;return;}
